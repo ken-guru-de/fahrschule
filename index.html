@@ -2522,10 +2522,7 @@ function toggleSonderDash(sid,key,min){
   if(!s.sonder||Array.isArray(s.sonder))s.sonder={ueberland:0,autobahn:0,nacht:0};
   s.sonder[key]=(s.sonder[key]||0)>=min?0:min;
   saveAll();
-  const icon=document.getElementById("sf-icon-"+key);
-  const label=document.getElementById("sf-label-"+key);
-  if(icon){icon.className="ti "+(s.sonder[key]>=min?"ti-checkbox":"ti-square");icon.style.color=s.sonder[key]>=min?"#27A843":"var(--tx3)";}
-  if(label){label.style.textDecoration=s.sonder[key]>=min?"line-through":"none";label.style.color=s.sonder[key]>=min?"var(--tx3)":"var(--tx)";}
+  renderDashSchueler(sid);
 }
 
 function changeGFADash(sid,key,d){
