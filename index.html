@@ -40,7 +40,8 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
 .app{display:flex;flex-direction:column;height:100%;}
 .screen{display:none;flex-direction:column;height:100%;}
 .screen.active{display:flex;}
-.topbar{display:flex;align-items:center;gap:8px;padding:calc(var(--safe-top) + 10px) 20px 14px;background:linear-gradient(160deg,#FF8240 0%,#FF6B2B 60%,#e85510 100%);flex-shrink:0;min-height:52px;box-shadow:0 4px 20px rgba(255,107,43,0.45);}
+.topbar{display:flex;align-items:center;gap:8px;padding:calc(var(--safe-top) + 10px) 20px 14px;background:linear-gradient(160deg,#FF8240 0%,#FF6B2B 60%,#e85510 100%);flex-shrink:0;min-height:52px;box-shadow:0 4px 20px rgba(255,107,43,0.45);overflow:hidden;transition:max-height .25s ease,padding-top .25s ease,padding-bottom .25s ease,opacity .2s ease;max-height:200px;}
+.topbar.tb-hidden{max-height:0;padding-top:0;padding-bottom:0;opacity:0;box-shadow:none;}
 .topbar-title{font-size:22px;font-weight:700;flex:1;color:white;letter-spacing:-.3px;}
 .btn-icon{background:rgba(255,255,255,0.18);border:none;cursor:pointer;color:white;font-size:32px;display:flex;align-items:center;padding:8px;border-radius:14px;min-width:46px;min-height:46px;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.20),inset 0 1px 0 rgba(255,255,255,0.30);transition:background .12s;}
 .btn-icon-label{background:rgba(255,255,255,0.18);border:none;cursor:pointer;color:white;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:9px 4px 8px;border-radius:14px;flex:1;box-shadow:0 2px 8px rgba(0,0,0,0.20),inset 0 1px 0 rgba(255,255,255,0.30);transition:background .12s;font-family:inherit;}
@@ -72,6 +73,8 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
 .stat-box.accent .stat-lbl{color:rgba(255,255,255,0.75);}
 .stat-box.accent .stat-num{color:white;}
 .stat-box.accent .stat-unit{color:rgba(255,255,255,0.65);}
+.stat-glass-orange{background:linear-gradient(135deg,rgba(255,130,64,0.92),rgba(232,85,16,0.92));backdrop-filter:blur(16px) saturate(180%);-webkit-backdrop-filter:blur(16px) saturate(180%);box-shadow:0 14px 30px rgba(255,107,43,0.4),0 4px 10px rgba(255,107,43,0.22),inset 0 1.5px 0 rgba(255,222,195,0.55);border:1px solid rgba(255,255,255,0.22);}
+.stat-glass-blue{background:rgba(10,40,120,0.10);backdrop-filter:blur(16px) saturate(180%);-webkit-backdrop-filter:blur(16px) saturate(180%);box-shadow:0 14px 30px rgba(10,40,120,0.16),0 4px 10px rgba(10,40,120,0.10),inset 0 1.5px 0 rgba(200,220,255,0.5);border:1px solid rgba(100,150,255,0.32);}
 .stat-lbl{font-size:13px;font-weight:600;color:var(--tx3);margin-bottom:3px;text-transform:uppercase;letter-spacing:.04em;}
 .stat-num{font-size:30px;font-weight:700;color:var(--tx);line-height:1.1;}
 .monat-glas{position:relative;overflow:hidden;background:rgba(55,138,221,0.13);border:1px solid rgba(55,138,221,0.38);border-radius:var(--r-lg);backdrop-filter:blur(14px) saturate(170%);-webkit-backdrop-filter:blur(14px) saturate(170%);animation:monatGlow 3.2s ease-in-out infinite;}
@@ -516,8 +519,8 @@ function renderDashboard(dashDateOffset=0,fixedDate=null){
     </div>
     <div class="scroll">
       <div class="stat-grid">
-        <div class="stat-box accent" style="text-align:center;box-shadow:0 8px 32px rgba(255,107,43,0.45),inset 0 1px 0 rgba(255,200,150,0.5);cursor:pointer" onclick="renderAktiveSchueler()"><div class="stat-lbl">Aktive Schüler</div><div class="stat-num" style="font-size:48px">${schueler.filter(s=>!(s.pruefungen||[]).some(p=>p.bestanden===true)).length}</div></div>
-        <div class="stat-box" style="cursor:pointer" onclick="renderAbrechnung()"><div class="stat-lbl" id="ddb-lbl">Heute geplant</div><div class="stat-num" id="ddb-min">0<span class="stat-unit">min</span></div></div>
+        <div class="stat-box accent stat-glass-orange" style="text-align:center;cursor:pointer" onclick="renderAktiveSchueler()"><div class="stat-lbl">Aktive Schüler</div><div class="stat-num" style="font-size:48px">${schueler.filter(s=>!(s.pruefungen||[]).some(p=>p.bestanden===true)).length}</div></div>
+        <div class="stat-box stat-glass-blue" style="cursor:pointer" onclick="renderAbrechnung()"><div class="stat-lbl" id="ddb-lbl">Heute</div><div class="stat-num" id="ddb-min">0<span class="stat-unit">min</span></div></div>
       </div>`;
 
   // Find display date based on offset
@@ -557,13 +560,13 @@ function renderDashboard(dashDateOffset=0,fixedDate=null){
   const _showHeuteBtn=fixedDate?anzeigeDatum!==td:dashDateOffset!==0;
   html+=`<div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-      <button onclick="${_navPrev}" style="background:rgba(255,107,43,0.14);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border:1.5px solid rgba(255,107,43,0.4);border-radius:50%;color:var(--accent);font-size:25px;width:52px;height:52px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 15px rgba(255,107,43,0.2)"><i class="ti ti-chevron-left"></i></button>
+      <button onclick="${_navPrev}" style="background:rgba(10,40,120,0.45);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border:1.5px solid rgba(100,150,255,0.5);border-radius:50%;color:#a8c4ff;font-size:25px;width:52px;height:52px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 14px 32px rgba(10,40,120,0.45),0 4px 10px rgba(10,40,120,0.3),inset 0 1.5px 0 rgba(200,220,255,0.5)"><i class="ti ti-chevron-left"></i></button>
       <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;flex:1;min-width:0;padding:0 10px">
         ${lblTop?`<span style="font-size:12px;font-weight:700;letter-spacing:.08em;color:var(--tx3);text-transform:uppercase;text-align:center;line-height:1.1">${lblTop}</span>`:''}
         <span style="font-size:20px;font-weight:800;letter-spacing:.02em;color:var(--tx);text-transform:uppercase;text-align:center;line-height:1.15">${lblMain}</span>
         ${_showHeuteBtn?`<button onclick="renderDashboard(0)" style="background:none;border:1px solid var(--accent);border-radius:8px;color:var(--accent);font-size:13px;padding:2px 10px;margin-top:2px;cursor:pointer;font-family:inherit">Heute</button>`:''}
       </div>
-      <button onclick="${_navNext}" style="background:rgba(255,107,43,0.14);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border:1.5px solid rgba(255,107,43,0.4);border-radius:50%;color:var(--accent);font-size:25px;width:52px;height:52px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 15px rgba(255,107,43,0.2)"><i class="ti ti-chevron-right"></i></button>
+      <button onclick="${_navNext}" style="background:rgba(10,40,120,0.45);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border:1.5px solid rgba(100,150,255,0.5);border-radius:50%;color:#a8c4ff;font-size:25px;width:52px;height:52px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 14px 32px rgba(10,40,120,0.45),0 4px 10px rgba(10,40,120,0.3),inset 0 1.5px 0 rgba(200,220,255,0.5)"><i class="ti ti-chevron-right"></i></button>
     </div>`;
   if(anzeigeTermine.length){
     // Kartenhöhe proportional zur Dauer: 80 min ≈ Standardhöhe, längere Termine entsprechend höher
@@ -650,10 +653,10 @@ function renderDashboard(dashDateOffset=0,fixedDate=null){
   setTimeout(()=>{
     initPTR();
     initSwipe();
+    initTopbarAutoHide();
     const lbl=document.getElementById("ddb-lbl");
     const min=document.getElementById("ddb-min");
-    const isPast=anzeigeDatum<td;
-    if(lbl){lbl.textContent=anzeigeLblShort+(isPast?" gefahren":" geplant");lbl.style.textAlign="center";}
+    if(lbl){lbl.textContent=anzeigeLblShort;lbl.style.textAlign="center";}
     if(min){min.innerHTML=anzeigeTotalMin+'<span class="stat-unit">min</span>';min.style.fontSize="42px";min.style.textAlign="center";}
     const box=document.getElementById("dash-day-box");
     if(box)box.style.textAlign="center";
@@ -2101,6 +2104,21 @@ function _doDelTagTermin(date,idx){
 function initPTR(){
   // Pull-to-Refresh deaktiviert: das Ziehen/Bewegen des Bildschirminhalts ist nicht gewollt.
   return;
+}
+// Topbar beim Runterscrollen ausblenden, beim Hochscrollen wieder einblenden (nur Startbildschirm)
+function initTopbarAutoHide(){
+  const scrollEl=document.querySelector(".scroll");
+  const topbar=document.querySelector(".topbar");
+  if(!scrollEl||!topbar)return;
+  let lastY=scrollEl.scrollTop;
+  scrollEl.addEventListener("scroll",()=>{
+    const y=scrollEl.scrollTop;
+    const dy=y-lastY;
+    if(y<20){topbar.classList.remove("tb-hidden");}
+    else if(dy>6){topbar.classList.add("tb-hidden");}
+    else if(dy<-6){topbar.classList.remove("tb-hidden");}
+    lastY=y;
+  },{passive:true});
 }
 
 // ── BACKUP / RESTORE ─────────────────────────────────────────────────────────
