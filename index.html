@@ -1514,15 +1514,8 @@ function renderStatistik(){
     return{ort:o,tot,best,quote:tot?Math.round((best/tot)*100):null};
   }).filter(o=>o.tot>0);
   const td2=todayStr();
-  // Upcoming (future, open) first sorted by date asc, then past results sorted by date desc
-  const recent=[...alleInklOffen].sort((a,b)=>{
-    const aUpcoming=a.datum>=td2&&(a.bestanden===null||a.bestanden===undefined);
-    const bUpcoming=b.datum>=td2&&(b.bestanden===null||b.bestanden===undefined);
-    if(aUpcoming&&!bUpcoming)return -1;
-    if(!aUpcoming&&bUpcoming)return 1;
-    if(aUpcoming&&bUpcoming)return a.datum.localeCompare(b.datum); // upcoming: earliest first
-    return b.datum.localeCompare(a.datum); // past: most recent first
-  }).slice(0,15);
+  // Alle Prüfungen (offen + abgeschlossen) rein chronologisch, älteste zuerst
+  const alleSortiert=[...alleInklOffen].sort((a,b)=>(a.datum||"").localeCompare(b.datum||""));
 
   let html=`<div class="screen active" id="scr-stat">
     <div class="topbar">
@@ -1556,10 +1549,10 @@ function renderStatistik(){
       });
       html+=`</div></div>`;
     }
-    if(recent.length){
-      const upcomingCount=recent.filter(p=>p.datum>=td2&&(p.bestanden===null||p.bestanden===undefined)).length;
-      html+=`<div><div class="sec-label">Prüfungen (${upcomingCount} ausstehend)</div>`;
-      recent.forEach(p=>{
+    if(alleSortiert.length){
+      const upcomingCount=alleSortiert.filter(p=>p.datum>=td2&&(p.bestanden===null||p.bestanden===undefined)).length;
+      html+=`<div><div class="sec-label">Alle Prüfungen (chronologisch${upcomingCount?" · "+upcomingCount+" ausstehend":""})</div>`;
+      alleSortiert.forEach(p=>{
         const fd=fmtDate(p.datum);
         const pOffen=p.bestanden===null||p.bestanden===undefined;
         const isUpcoming=p.datum>=td2&&pOffen;
@@ -1568,20 +1561,6 @@ function renderStatistik(){
           <div style="flex:1"><div style="font-size:17px;font-weight:600;color:var(--tx)">${p.name}</div>
           <div style="font-size:14px;color:var(--tx2);margin-top:3px">${p.versuch}. Prüfung · ${fd.day}. ${fd.mon} ${fd.year}${p.prufort?" · "+p.prufort:""}</div></div>
           <span style="font-size:21px;color:${pOffen?"var(--accent)":p.bestanden?"var(--ok-tx)":"var(--bad-tx)"}">${pOffen?"⏳":p.bestanden?"✓":"✗"}</span>
-        </div>`;
-      });
-      html+=`</div>`;
-    }
-    const chronologisch=[...alle].sort((a,b)=>(a.datum||"").localeCompare(b.datum||""));
-    if(chronologisch.length){
-      html+=`<div><div class="sec-label">Alle Prüfungen (chronologisch)</div>`;
-      chronologisch.forEach(p=>{
-        const fd=fmtDate(p.datum);
-        html+=`<div class="pruef-result-item" onclick="renderDashSchueler('${p.sid}')" style="cursor:pointer;padding:14px 16px;gap:14px">
-          <div style="width:40px;height:40px;border-radius:50%;flex-shrink:0;text-align:center;line-height:40px;font-size:17px;font-weight:700;${p.bestanden?"background:var(--ok-bg);color:var(--ok-tx);":"background:var(--bad-bg);color:var(--bad-tx);"}">${p.versuch}</div>
-          <div style="flex:1"><div style="font-size:17px;font-weight:600;color:var(--tx)">${p.name}</div>
-          <div style="font-size:14px;color:var(--tx2);margin-top:3px">${p.versuch}. Prüfung · ${fd.day}. ${fd.mon} ${fd.year}${p.prufort?" · "+p.prufort:""}</div></div>
-          <span style="font-size:21px;color:${p.bestanden?"var(--ok-tx)":"var(--bad-tx)"}">${p.bestanden?"✓":"✗"}</span>
         </div>`;
       });
       html+=`</div>`;
