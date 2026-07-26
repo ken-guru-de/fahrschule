@@ -483,7 +483,7 @@ function renderDashboard(dashDateOffset=0,fixedDate=null){
         <button class="btn-icon" onclick="${fixedDate?"buildKalender()":"renderKalender()"}"><i class="ti ti-calendar"></i></button>
         <button class="btn-icon" onclick="renderListe()"><i class="ti ti-users"></i></button>
         <button class="btn-icon" onclick="renderNeuSchueler()"><i class="ti ti-user-plus"></i></button>
-        <button class="btn-icon" onclick="renderAbrechnung()"><i class="ti ti-receipt"></i></button>
+        <button class="btn-icon" onclick="renderAbrechnung()"><i class="ti ti-moneybag"></i></button>
         <button class="btn-icon" onclick="renderStatistik()"><i class="ti ti-chart-bar"></i></button>
       </div>
     </div>
@@ -1670,7 +1670,7 @@ function saveFoto(sid,input){
 
 // ── KALENDER ──────────────────────────────────────────────────────────────────
 let curYear=2026,curMonth=5,selDate=null;
-function renderKalender(){const td=todayStr();const p=td.split("-");curYear=parseInt(p[0]);curMonth=parseInt(p[1]);selDate=td;buildKalender();}
+function renderKalender(){const td=todayStr();const p=td.split("-");curYear=parseInt(p[0]);curMonth=parseInt(p[1]);selDate=td;renderTagAnsicht(td);}
 function buildKalender(){
   let html=`<div class="screen active" id="scr-kal">
     <div class="topbar">
@@ -3246,7 +3246,7 @@ function renderAbrechnung(weekOffset=0){
   const html=`<div class="screen active" id="scr-abrech">
     <div class="topbar">
       <button class="btn-icon" onclick="renderDashboard()"><i class="ti ti-arrow-left"></i></button>
-      <span class="topbar-title"><i class="ti ti-receipt" style="font-size:21px;margin-right:6px"></i>Abrechnung</span>
+      <span class="topbar-title"><i class="ti ti-moneybag" style="font-size:21px;margin-right:6px"></i>Abrechnung</span>
     </div>
     <div class="scroll">
       <!-- 4 Kacheln -->
