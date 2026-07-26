@@ -507,19 +507,7 @@ function renderDashboard(dashDateOffset=0,fixedDate=null){
   });
   allePruef.length=0;allePruefFiltered.forEach(p=>allePruef.push(p));
 
-  // Woche/Monat-Übersicht (bezogen auf heute, unabhängig vom navigierten Tag)
-  const _heute=new Date(td);
-  const _dow=_heute.getDay();
-  const _montag=new Date(_heute);
-  _montag.setDate(_heute.getDate()+(_dow===0?-6:1-_dow));
-  let wocheMin=0;
-  for(let i=0;i<5;i++){
-    const d=new Date(_montag);d.setDate(_montag.getDate()+i);
-    const key=toKey(d.getFullYear(),d.getMonth()+1,d.getDate());
-    wocheMin+=(termine[key]||[]).reduce((a,t)=>a+(t.min||0),0);
-  }
-  const _monatPrefix=td.slice(0,7);
-  const monatMin=Object.entries(termine).reduce((sum,[d,ts])=>d.startsWith(_monatPrefix)?sum+ts.reduce((a,t)=>a+(t.min||0),0):sum,0);
+  // Woche/Monat-Übersicht wird nur noch in der Abrechnung berechnet, hier nicht mehr benötigt
 
   let html=`<div class="screen active" id="scr-dash">
     <div class="topbar">
@@ -531,14 +519,9 @@ function renderDashboard(dashDateOffset=0,fixedDate=null){
       </div>
     </div>
     <div class="scroll">
-      <div class="stat-box stat-glass-blue" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px" onclick="renderAbrechnung()">
-        <div>
-          <div class="stat-num" id="ddb-min" style="font-size:42px">0<span class="stat-unit">min</span></div>
-        </div>
-        <div style="display:flex;gap:16px;flex-shrink:0">
-          <div style="text-align:center"><div style="font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;font-weight:600">Woche</div><div style="font-size:17px;font-weight:700;color:var(--tx);margin-top:2px">${wocheMin}<span style="font-size:12px;color:var(--tx3)"> min</span></div></div>
-          <div style="text-align:center"><div style="font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;font-weight:600">Monat</div><div style="font-size:17px;font-weight:700;color:var(--tx);margin-top:2px">${monatMin}<span style="font-size:12px;color:var(--tx3)"> min</span></div></div>
-        </div>
+      <div class="stat-box stat-glass-blue" style="cursor:pointer;display:flex;align-items:baseline;justify-content:center;gap:10px" onclick="renderAbrechnung()">
+        <div class="stat-num" id="ddb-min" style="font-size:42px">0<span class="stat-unit">min</span></div>
+        <div id="ddb-eur" style="font-size:16px;font-weight:600;color:var(--tx2)">0,00&nbsp;€</div>
       </div>`;
 
   // Find display date based on offset
@@ -547,7 +530,7 @@ function renderDashboard(dashDateOffset=0,fixedDate=null){
   if(fixedDate){
     anzeigeDatum=fixedDate;
     const fd2=fmtDate(anzeigeDatum);
-    anzeigeLabel=anzeigeDatum===td?"Heute":wochentagKurz(anzeigeDatum)+", "+fd2.day+". "+fd2.mon+" "+fd2.year;
+    anzeigeLabel=anzeigeDatum===td?"Heute":wochentagKurz(anzeigeDatum)+", "+fd2.day+". "+fd2.mon;
   } else if(dashDateOffset===0&&!heuteTermine.length){
     const alleKeys=Object.keys(termine).filter(d=>d>td).sort();
     if(alleKeys.length){
@@ -563,7 +546,7 @@ function renderDashboard(dashDateOffset=0,fixedDate=null){
     if(allKeys[targetIdx]){
       anzeigeDatum=allKeys[targetIdx];
       const fd2=fmtDate(anzeigeDatum);
-      anzeigeLabel=anzeigeDatum===td?"Heute":wochentagKurz(anzeigeDatum)+", "+fd2.day+". "+fd2.mon+" "+fd2.year;
+      anzeigeLabel=anzeigeDatum===td?"Heute":wochentagKurz(anzeigeDatum)+", "+fd2.day+". "+fd2.mon;
     }
   }
   const anzeigeTermine=(termine[anzeigeDatum]||[]).sort((a,b)=>a.uhr.localeCompare(b.uhr));
@@ -676,6 +659,8 @@ function renderDashboard(dashDateOffset=0,fixedDate=null){
     initSwipe();
     const min=document.getElementById("ddb-min");
     if(min){min.innerHTML=anzeigeTotalMin+'<span class="stat-unit">min</span>';}
+    const eur=document.getElementById("ddb-eur");
+    if(eur){const satzT=getAbrechnungSatz();eur.textContent=((anzeigeTotalMin/60)*satzT).toFixed(2).replace('.',',')+'\u00a0€';}
     const box=document.getElementById("dash-day-box");
     if(box)box.style.textAlign="center";
   },10);
@@ -917,12 +902,12 @@ function renderNeuSchueler(fromSid){
         <div class="card-row"><span class="card-label"><i class="ti ti-license"></i>Klasse</span>
           <select id="n-kl">${KLASSEN.map(k=>`<option value="${k}" ${s&&s.klasse===k?"selected":""}>${k}</option>`).join("")}</select>
         </div>
-        <div class="card-row"><span class="card-label"><i class="ti ti-map-pin"></i>Prüfort</span>
+        ${!s?`<div class="card-row"><span class="card-label"><i class="ti ti-map-pin"></i>Prüfort</span>
           <select id="n-pf">
             <option value="">Auswählen…</option>
-            ${PRUFORTE.map(p=>`<option value="${p}" ${s&&s.prufort===p?"selected":""}>${p}</option>`).join("")}
+            ${PRUFORTE.map(p=>`<option value="${p}">${p}</option>`).join("")}
           </select>
-        </div>
+        </div>`:''}
 
         <div class="card-row"><span class="card-label"><i class="ti ti-book"></i>Theorie</span>
           <label class="toggle-wrap"><input type="checkbox" id="n-th" ${s&&s.theorie?"checked":""}/><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
@@ -993,7 +978,8 @@ function saveSchueler(editSid){
   const nn=document.getElementById("n-nn").value.trim();
   const kl=document.getElementById("n-kl").value;
   if(!vn||!nn){if(!vn)document.getElementById("n-vn").classList.add("err-border");if(!nn)document.getElementById("n-nn").classList.add("err-border");setTimeout(()=>document.querySelectorAll(".err-border").forEach(e=>e.classList.remove("err-border")),1500);return;}
-  const pf=document.getElementById("n-pf").value;
+  const pfEl=document.getElementById("n-pf");
+  const pf=pfEl?pfEl.value:(editSid?getS(editSid).prufort:"");
   const pt='';
   const th=document.getElementById("n-th").checked;
   const sp=document.getElementById("n-sp").value.trim();
