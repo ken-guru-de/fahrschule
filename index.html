@@ -1756,6 +1756,13 @@ function renderCalDetail(){
   html+=`<button class="btn-full" style="margin-top:6px" onclick="renderNeuKalTermin('${selDate}')"><i class="ti ti-plus"></i> Termin hinzufügen</button>`;
   el.innerHTML=html;
 }
+function _removeOffenePruefungFuerTermin(t,date){
+  if(!t||t.typ!=="pruef"||!t.sid||t.sid.startsWith("__auffrisch__"))return;
+  const ps=getS(t.sid);
+  if(!ps||!ps.pruefungen)return;
+  const idx=ps.pruefungen.findIndex(p=>p.datum===date&&(p.bestanden===null||p.bestanden===undefined));
+  if(idx>=0)ps.pruefungen.splice(idx,1);
+}
 function delKalTermin(key,i){
   if(!termine[key])return;
   const t=termine[key][i];const s=getS(t.sid);const name=s?s.vorname+" "+s.nachname:"Termin";
@@ -1771,6 +1778,7 @@ function delKalTermin(key,i){
 function _doDelKalTermin(key,i){
   closeModal();
   if(!termine[key])return;
+  _removeOffenePruefungFuerTermin(termine[key][i],key);
   termine[key].splice(i,1);if(!termine[key].length)delete termine[key];
   saveAll();setTimeout(()=>renderTagAnsicht(key),50);
 }
@@ -2305,6 +2313,7 @@ function _doDeleteEktTermin(date,idx){
   closeModal();
   if(!termine[date])return;
   _pushTerminTrash(date,termine[date][idx]);
+  _removeOffenePruefungFuerTermin(termine[date][idx],date);
   termine[date].splice(idx,1);
   if(!termine[date].length)delete termine[date];
   saveAll();renderTagAnsicht(date);
@@ -2414,6 +2423,7 @@ function _doDelDashTermin(date,idx){
   closeModal();
   if(!termine[date])return;
   _pushTerminTrash(date,termine[date][idx]);
+  _removeOffenePruefungFuerTermin(termine[date][idx],date);
   termine[date].splice(idx,1);
   if(!termine[date].length)delete termine[date];
   saveAll();if(AppState.et.backSid)renderDashSchueler(AppState.et.backSid);else renderDashboard();
@@ -2600,6 +2610,7 @@ function _confirmDelTagTermin(date,idx){
 function _doDelTagTermin(date,idx){
   closeModal();
   if(!termine[date])return;
+  _removeOffenePruefungFuerTermin(termine[date][idx],date);
   termine[date].splice(idx,1);
   if(!termine[date].length)delete termine[date];
   saveAll();renderTagAnsicht(date);
