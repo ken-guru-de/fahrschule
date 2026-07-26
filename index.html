@@ -576,14 +576,18 @@ function renderDashboard(dashDateOffset=0,fixedDate=null){
   const _navNext=fixedDate?`renderDashboard(0,'${_adjWeekday(anzeigeDatum,1)}')`:`renderDashboard(${dashDateOffset+1})`;
   const _showHeuteBtn=fixedDate?anzeigeDatum!==td:dashDateOffset!==0;
   html+=`<div>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;margin-left:-6px;margin-right:-6px">
-      <button onclick="${_navPrev}" style="background:rgba(10,40,120,0.45);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border:1.5px solid rgba(100,150,255,0.5);border-radius:50%;color:#a8c4ff;font-size:25px;width:52px;height:52px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 14px 32px rgba(10,40,120,0.45),0 4px 10px rgba(10,40,120,0.3),inset 0 1.5px 0 rgba(200,220,255,0.5)"><i class="ti ti-chevron-left"></i></button>
-      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;flex:1;min-width:0;padding:0 10px">
+    <div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;margin-bottom:8px">
+      <div style="display:flex;justify-content:center">
+        <button onclick="${_navPrev}" style="background:rgba(10,40,120,0.45);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border:1.5px solid rgba(100,150,255,0.5);border-radius:50%;color:#a8c4ff;font-size:25px;width:52px;height:52px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 14px 32px rgba(10,40,120,0.45),0 4px 10px rgba(10,40,120,0.3),inset 0 1.5px 0 rgba(200,220,255,0.5)"><i class="ti ti-chevron-left"></i></button>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:0 6px">
         ${lblTop?`<span style="font-size:12px;font-weight:700;letter-spacing:.08em;color:var(--tx3);text-transform:uppercase;text-align:center;line-height:1.1">${lblTop}</span>`:''}
-        <span style="font-size:20px;font-weight:800;letter-spacing:.02em;color:var(--tx);text-transform:uppercase;text-align:center;line-height:1.15">${lblMain}</span>
+        <span style="font-size:20px;font-weight:800;letter-spacing:.02em;color:var(--tx);text-transform:uppercase;text-align:center;line-height:1.15;white-space:nowrap">${lblMain}</span>
         ${_showHeuteBtn?`<button onclick="renderDashboard(0)" style="background:none;border:1px solid var(--accent);border-radius:8px;color:var(--accent);font-size:13px;padding:2px 10px;margin-top:2px;cursor:pointer;font-family:inherit">Heute</button>`:''}
       </div>
-      <button onclick="${_navNext}" style="background:rgba(10,40,120,0.45);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border:1.5px solid rgba(100,150,255,0.5);border-radius:50%;color:#a8c4ff;font-size:25px;width:52px;height:52px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 14px 32px rgba(10,40,120,0.45),0 4px 10px rgba(10,40,120,0.3),inset 0 1.5px 0 rgba(200,220,255,0.5)"><i class="ti ti-chevron-right"></i></button>
+      <div style="display:flex;justify-content:center">
+        <button onclick="${_navNext}" style="background:rgba(10,40,120,0.45);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border:1.5px solid rgba(100,150,255,0.5);border-radius:50%;color:#a8c4ff;font-size:25px;width:52px;height:52px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 14px 32px rgba(10,40,120,0.45),0 4px 10px rgba(10,40,120,0.3),inset 0 1.5px 0 rgba(200,220,255,0.5)"><i class="ti ti-chevron-right"></i></button>
+      </div>
     </div>`;
   if(anzeigeTermine.length){
     // Kartenhöhe proportional zur Dauer: 80 min ≈ Standardhöhe, längere Termine entsprechend höher
