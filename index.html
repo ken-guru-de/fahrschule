@@ -648,7 +648,7 @@ function renderDashboard(dashDateOffset=0,fixedDate=null){
   html+=`<button class="btn-full" style="margin-top:8px" onclick="renderNeuKalTermin('${anzeigeDatum}')"><i class="ti ti-plus"></i> Termin hinzufügen</button>`;
   html+=`</div>`;
   if(allePruef.length){
-    const pruefOffen=allePruef.filter(ep=>ep.bestanden===null||ep.bestanden===undefined);
+    const pruefOffen=allePruef.filter(ep=>(ep.bestanden===null||ep.bestanden===undefined)&&ep.datum>=td);
     if(pruefOffen.length){
       html+=`<div><div class="sec-label">Nächste Prüfungen (${pruefOffen.length})</div>`;
       pruefOffen.forEach(ep=>{
@@ -949,9 +949,6 @@ function renderNeuSchueler(fromSid){
           </div>`).join('')}
         </div>`:''}
         ${s?`
-        <div class="card-row"><span class="card-label"><i class="ti ti-trophy"></i>Praxis</span>
-          <label class="toggle-wrap"><input type="checkbox" id="n-pr" ${s.pruefungen&&s.pruefungen.some(p=>p.bestanden===true)?"checked":""}/><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
-        </div>
         <div class="card-row"><span class="card-label"><i class="ti ti-road"></i>Überland</span>
           <label class="toggle-wrap"><input type="checkbox" id="n-ue" ${(s.sonder&&(s.sonder.ueberland||0)>=270)?"checked":""}/><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
         </div>
@@ -1015,23 +1012,6 @@ function saveSchueler(editSid){
   if(editSid){
     const s=getS(editSid);
     s.vorname=vn;s.nachname=nn;s.spitz=sp;s.geschlecht=AppState.geschlecht||'m';s.tel=document.getElementById('n-tel').value.trim();s.beginn=bg;s.klasse=kl;s.prufort=pf;s.prueftermin=pt;s.theorie=th;s.farbe=AppState.selFarbe;
-    // Praxis Toggle
-    const prEl=document.getElementById('n-pr');
-    if(prEl){
-      if(!s.pruefungen)s.pruefungen=[];
-      const warBestanden=s.pruefungen.some(p=>p.bestanden===true);
-      if(prEl.checked&&!warBestanden){
-        const offen=s.pruefungen.find(p=>p.bestanden===null||p.bestanden===undefined);
-        if(offen){
-          offen.bestanden=true;
-        } else {
-          const pt2=Object.entries(termine).sort((a,b)=>b[0].localeCompare(a[0])).flatMap(([d,ts])=>ts.filter(t=>t.sid===s.id&&t.typ==='pruef').map(t=>({...t,datum:d})))[0];
-          s.pruefungen.push({datum:pt2?pt2.datum:todayStr(),versuch:s.pruefungen.length+1,bestanden:true,prufort:s.prufort||''});
-        }
-      } else if(!prEl.checked&&warBestanden){
-        s.pruefungen.forEach(p=>{if(p.bestanden===true)p.bestanden=null;});
-      }
-    }
     // Sonderfahrten Toggles - nur im Edit-Modus
     if(editSid){
       if(!s.sonder||Array.isArray(s.sonder))s.sonder={ueberland:0,autobahn:0,nacht:0};
