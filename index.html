@@ -1670,7 +1670,7 @@ function saveFoto(sid,input){
 
 // ── KALENDER ──────────────────────────────────────────────────────────────────
 let curYear=2026,curMonth=5,selDate=null;
-function renderKalender(){const td=todayStr();const p=td.split("-");curYear=parseInt(p[0]);curMonth=parseInt(p[1]);selDate=td;buildKalender();}
+function renderKalender(){const t0=new Date();const dw=t0.getDay();const add=dw===0?1:(dw===6?2:0);const t=new Date(t0);t.setDate(t0.getDate()+add);const td=toKey(t.getFullYear(),t.getMonth()+1,t.getDate());const p=td.split("-");curYear=parseInt(p[0]);curMonth=parseInt(p[1]);selDate=td;buildKalender();}
 function buildKalender(){
   let html=`<div class="screen active" id="scr-kal">
     <div class="topbar">
