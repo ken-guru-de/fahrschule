@@ -519,9 +519,9 @@ function renderDashboard(dashDateOffset=0,fixedDate=null){
       </div>
     </div>
     <div class="scroll">
-      <div class="stat-box stat-glass-blue" style="cursor:pointer;display:flex;align-items:baseline;justify-content:center;gap:10px" onclick="renderAbrechnung()">
-        <div class="stat-num" id="ddb-min" style="font-size:42px">0<span class="stat-unit">min</span></div>
-        <div id="ddb-eur" style="font-size:16px;font-weight:600;color:var(--tx2)">0,00&nbsp;€</div>
+      <div class="stat-box stat-glass-blue" style="cursor:pointer;display:flex;align-items:baseline;justify-content:space-between;gap:10px" onclick="renderAbrechnung()">
+        <div class="stat-num" id="ddb-min" style="font-size:42px;flex-shrink:0">0<span class="stat-unit">min</span></div>
+        <div id="ddb-eur" style="font-size:20px;font-weight:700;color:#378ADD">0,00&nbsp;€</div>
       </div>`;
 
   // Find display date based on offset
