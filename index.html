@@ -311,6 +311,26 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
 <script>
 const IS_IPAD=false;
 
+// ── HORIZONTALES VERSCHIEBEN HART UNTERBINDEN ─────────────────────────────────
+// CSS touch-action reicht in der iOS-Standalone-PWA nicht immer aus, um jegliches
+// seitliches "Geben" des Bildschirms zu verhindern. Deshalb zusätzlich per JS:
+// Bei einer überwiegend horizontalen Fingerbewegung wird die native Aktion verhindert.
+// Ausnahmen: Swipe-to-delete (.swipe-item) und der Foto-Zuschneide-Editor.
+(function(){
+  let sx=0, sy=0, locked=null, skip=false;
+  document.addEventListener("touchstart",function(e){
+    if(e.touches.length!==1){skip=true;return;}
+    skip=!!(e.target.closest(".swipe-item")||e.target.closest("#foto-edit-img"));
+    sx=e.touches[0].clientX;sy=e.touches[0].clientY;locked=null;
+  },{passive:true});
+  document.addEventListener("touchmove",function(e){
+    if(skip||e.touches.length!==1)return;
+    const dx=e.touches[0].clientX-sx,dy=e.touches[0].clientY-sy;
+    if(locked===null&&(Math.abs(dx)>4||Math.abs(dy)>4)){locked=Math.abs(dx)>Math.abs(dy)?"x":"y";}
+    if(locked==="x")e.preventDefault();
+  },{passive:false});
+})();
+
 // ── ZENTRALER APP-STATE ───────────────────────────────────────────────────────
 const AppState={
   fahrt:{typ:"normal",einh:1},
