@@ -593,7 +593,7 @@ function renderDashboard(dashDateOffset=0,fixedDate=null){
         :notizLcT.includes('überland')?'ueberland'
         :notizLcT.includes('autobahn')?'autobahn'
         :notizLcT.includes('nacht')?'nacht':'';
-      const fieldHexT=isPruefT?"#E24B4A":sonderTypT==='autobahn'?"#378ADD":sonderTypT==='ueberland'?"#E8B923":sonderTypT==='nacht'?"#1A1A1A":"";
+      const fieldHexT=isPruefT?"#E24B4A":sonderTypT==='autobahn'?"#378ADD":sonderTypT==='ueberland'?"#E8B923":sonderTypT==='nacht'?"#1A1A1A":"#3B8C5A";
       const fieldTxtT=fieldHexT?(sonderTypT==='ueberland'?"#141414":"#ffffff"):"";
       const fieldTxt2T=fieldHexT?(sonderTypT==='ueberland'?"rgba(20,20,20,.75)":"rgba(255,255,255,.8)"):"";
       const endZeit=(()=>{const [h,m]=t.uhr.split(":").map(Number);const tot=h*60+m+t.min;return String(Math.floor(tot/60)%24).padStart(2,"0")+":"+String(tot%60).padStart(2,"0");})();
