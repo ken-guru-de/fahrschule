@@ -3312,7 +3312,7 @@ function renderAbrechnung(weekOffset=0){
         <div class="card-row">
           <span class="card-label"><i class="ti ti-currency-euro"></i>Satz / 60 min</span>
           <div style="display:flex;align-items:center;gap:8px;justify-content:flex-end;flex:1">
-            <input type="number" id="satz-input" value="${satz}" min="1" max="999" step="0.5" onfocus="this.select()"
+            <input type="number" id="satz-input" value="${satz}" min="1" max="999" step="0.5" onfocus="this.select();setTimeout(()=>this.scrollIntoView({block:'center',behavior:'smooth'}),300)"
               style="width:80px;text-align:center;border:.5px solid var(--br2);border-radius:6px;background:var(--bg2);font-size:20px;color:var(--tx);padding:6px"
               onchange="saveSatz(this.value)"/>
             <span style="font-size:17px;color:var(--tx2)">\u20ac</span>
