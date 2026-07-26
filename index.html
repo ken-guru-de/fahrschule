@@ -513,7 +513,7 @@ function renderDashboard(dashDateOffset=0,fixedDate=null){
     </div>
     <div class="scroll">
       <div class="stat-grid">
-        <div class="stat-box accent" style="text-align:center;box-shadow:0 8px 32px rgba(255,107,43,0.45),inset 0 1px 0 rgba(255,200,150,0.5)"><div class="stat-lbl">Aktive Schüler</div><div class="stat-num" style="font-size:48px">${schueler.filter(s=>!(s.pruefungen||[]).some(p=>p.bestanden===true)).length}</div></div>
+        <div class="stat-box accent" style="text-align:center;box-shadow:0 8px 32px rgba(255,107,43,0.45),inset 0 1px 0 rgba(255,200,150,0.5);cursor:pointer" onclick="renderAktiveSchueler()"><div class="stat-lbl">Aktive Schüler</div><div class="stat-num" style="font-size:48px">${schueler.filter(s=>!(s.pruefungen||[]).some(p=>p.bestanden===true)).length}</div></div>
         <div class="stat-box"><div class="stat-lbl" id="ddb-lbl">Heute geplant</div><div class="stat-num" id="ddb-min">0<span class="stat-unit">min</span></div></div>
       </div>`;
 
@@ -699,6 +699,29 @@ function _schuelerCardHTML(s,heuteIds,sortMode){
       <span class="status-dot" style="background:${dotColor}"></span>
     </div>
   </div>`;
+}
+
+// ── AKTIVE SCHÜLER (von Dashboard-Kachel) ────────────────────────────────────
+function renderAktiveSchueler(){
+  const td=todayStr();
+  const heuteIds=new Set((termine[td]||[]).map(t=>t.sid));
+  const aktive=[...schueler.filter(s=>!(s.pruefungen||[]).some(p=>p.bestanden===true))]
+    .sort((a,b)=>_nextTerminDT(a).localeCompare(_nextTerminDT(b)));
+  let html=`<div class="screen active">
+    <div class="topbar">
+      <button class="btn-icon" onclick="renderDashboard()"><i class="ti ti-arrow-left"></i></button>
+      <span class="topbar-title">Aktive Schüler (${aktive.length})</span>
+    </div>
+    <div class="scroll">`;
+  if(!aktive.length){
+    html+=`<div class="empty-hint"><i class="ti ti-users" style="font-size:32px;display:block;margin:0 auto 8px"></i>Keine aktiven Schüler</div>`;
+  }else{
+    aktive.forEach(s=>{html+=_schuelerCardHTML(s,heuteIds,"termin");});
+  }
+  html+=`</div></div>`;
+  renderApp(html);
+  initSwipe();
+  setTimeout(initPTR,50);
 }
 
 // ── SCHÜLERLISTE ──────────────────────────────────────────────────────────────
