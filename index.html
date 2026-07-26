@@ -43,6 +43,10 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
 .topbar{display:flex;align-items:center;gap:8px;padding:calc(var(--safe-top) + 10px) 20px 14px;background:linear-gradient(160deg,#FF8240 0%,#FF6B2B 60%,#e85510 100%);flex-shrink:0;min-height:52px;box-shadow:0 4px 20px rgba(255,107,43,0.45);}
 .topbar-title{font-size:22px;font-weight:700;flex:1;color:white;letter-spacing:-.3px;}
 .btn-icon{background:rgba(255,255,255,0.18);border:none;cursor:pointer;color:white;font-size:32px;display:flex;align-items:center;padding:8px;border-radius:14px;min-width:46px;min-height:46px;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.20),inset 0 1px 0 rgba(255,255,255,0.30);transition:background .12s;}
+.btn-icon-label{background:rgba(255,255,255,0.18);border:none;cursor:pointer;color:white;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:9px 4px 8px;border-radius:14px;flex:1;box-shadow:0 2px 8px rgba(0,0,0,0.20),inset 0 1px 0 rgba(255,255,255,0.30);transition:background .12s;font-family:inherit;}
+.btn-icon-label i{font-size:23px;}
+.btn-icon-label span{font-size:10.5px;font-weight:700;letter-spacing:.03em;opacity:.95;}
+.btn-icon-label:active{background:rgba(255,255,255,0.32);}
 .btn-icon:active{background:rgba(255,255,255,0.30);}
 .btn-icon.dark{color:var(--tx2);background:var(--bg2);box-shadow:var(--shadow-sm);}
 .btn-icon.dark:active{background:var(--bg3);}
@@ -503,18 +507,17 @@ function renderDashboard(dashDateOffset=0,fixedDate=null){
 
   let html=`<div class="screen active" id="scr-dash">
     <div class="topbar">
-      <div style="display:flex;align-items:center;justify-content:space-between;width:100%;gap:2px">
-        <button class="btn-icon" onclick="${fixedDate?"buildKalender()":"renderKalender()"}"><i class="ti ti-calendar"></i></button>
-        <button class="btn-icon" onclick="renderListe()"><i class="ti ti-users"></i></button>
-        <button class="btn-icon" onclick="renderAbrechnung()"><i class="ti ti-moneybag"></i></button>
-        <button class="btn-icon" onclick="renderStatistik()"><i class="ti ti-chart-bar"></i></button>
-        <button class="btn-icon" onclick="toggleDatenMenu()" title="Datensicherung"><i class="ti ti-device-floppy" style="font-size:30px"></i></button>
+      <div style="display:flex;align-items:center;justify-content:space-between;width:100%;gap:8px">
+        <button class="btn-icon-label" onclick="${fixedDate?"buildKalender()":"renderKalender()"}"><i class="ti ti-calendar"></i><span>Kalender</span></button>
+        <button class="btn-icon-label" onclick="renderListe()"><i class="ti ti-users"></i><span>Schüler</span></button>
+        <button class="btn-icon-label" onclick="renderStatistik()"><i class="ti ti-chart-bar"></i><span>Statistik</span></button>
+        <button class="btn-icon-label" onclick="toggleDatenMenu()"><i class="ti ti-device-floppy"></i><span>Sichern</span></button>
       </div>
     </div>
     <div class="scroll">
       <div class="stat-grid">
         <div class="stat-box accent" style="text-align:center;box-shadow:0 8px 32px rgba(255,107,43,0.45),inset 0 1px 0 rgba(255,200,150,0.5);cursor:pointer" onclick="renderAktiveSchueler()"><div class="stat-lbl">Aktive Schüler</div><div class="stat-num" style="font-size:48px">${schueler.filter(s=>!(s.pruefungen||[]).some(p=>p.bestanden===true)).length}</div></div>
-        <div class="stat-box"><div class="stat-lbl" id="ddb-lbl">Heute geplant</div><div class="stat-num" id="ddb-min">0<span class="stat-unit">min</span></div></div>
+        <div class="stat-box" style="cursor:pointer" onclick="renderAbrechnung()"><div class="stat-lbl" id="ddb-lbl">Heute geplant</div><div class="stat-num" id="ddb-min">0<span class="stat-unit">min</span></div></div>
       </div>`;
 
   // Find display date based on offset
