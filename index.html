@@ -2074,6 +2074,20 @@ function renderStatistik(){
       });
       html+=`</div>`;
     }
+    const chronologisch=[...alle].sort((a,b)=>(a.datum||"").localeCompare(b.datum||""));
+    if(chronologisch.length){
+      html+=`<div><div class="sec-label">Alle Prüfungen (chronologisch)</div>`;
+      chronologisch.forEach(p=>{
+        const fd=fmtDate(p.datum);
+        html+=`<div class="pruef-result-item" onclick="renderDashSchueler('${p.sid}')" style="cursor:pointer;padding:14px 16px;gap:14px">
+          <div style="width:40px;height:40px;border-radius:50%;flex-shrink:0;text-align:center;line-height:40px;font-size:17px;font-weight:700;${p.bestanden?"background:#EAF3DE;color:#27500A;":"background:#FCEBEB;color:#A32D2D;"}">${p.versuch}</div>
+          <div style="flex:1"><div style="font-size:17px;font-weight:600;color:var(--tx)">${p.name}</div>
+          <div style="font-size:14px;color:var(--tx2);margin-top:3px">${p.versuch}. Prüfung · ${fd.day}. ${fd.mon} ${fd.year}${p.prufort?" · "+p.prufort:""}</div></div>
+          <span style="font-size:21px;color:${p.bestanden?"#27500A":"#A32D2D"}">${p.bestanden?"✓":"✗"}</span>
+        </div>`;
+      });
+      html+=`</div>`;
+    }
   }
   html+=`</div></div>`;
   renderApp(html);
