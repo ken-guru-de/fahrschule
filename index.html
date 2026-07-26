@@ -504,7 +504,7 @@ function renderDashboard(dashDateOffset=0,fixedDate=null){
   let html=`<div class="screen active" id="scr-dash">
     <div class="topbar">
       <div style="display:flex;align-items:center;justify-content:space-between;width:100%;gap:2px">
-        <button class="btn-icon" onclick="toggleDatenMenu()" title="Datensicherung"><i class="ti ti-steering-wheel" style="font-size:30px"></i></button>
+        <button class="btn-icon" onclick="toggleDatenMenu()" title="Datensicherung"><i class="ti ti-device-floppy" style="font-size:30px"></i></button>
         <button class="btn-icon" onclick="${fixedDate?"buildKalender()":"renderKalender()"}"><i class="ti ti-calendar"></i></button>
         <button class="btn-icon" onclick="renderListe()"><i class="ti ti-users"></i></button>
         <button class="btn-icon" onclick="renderNeuSchueler()"><i class="ti ti-user-plus"></i></button>
