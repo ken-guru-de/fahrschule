@@ -1491,18 +1491,18 @@ function renderStatistik(){
   syncKalenderToFahrstunden();
   const alle=schueler.flatMap(s=>{
     const sorted=(s.pruefungen||[]).slice().sort((a,b)=>(a.datum||"").localeCompare(b.datum||""));
-    return sorted.map((p,i)=>({...p,versuch:i+1,sid:s.id,name:s.vorname+" "+s.nachname,klasse:s.klasse,prufort:s.prufort})).filter(p=>p.bestanden!==null&&p.bestanden!==undefined);
+    return sorted.map((p,i)=>({...p,versuch:i+1,sid:s.id,name:s.vorname+" "+s.nachname,klasse:s.klasse,prufort:p.prufort||s.prufort})).filter(p=>p.bestanden!==null&&p.bestanden!==undefined);
   });
   const alleInklOffen=schueler.flatMap(s=>{
     const sorted=(s.pruefungen||[]).slice().sort((a,b)=>(a.datum||"").localeCompare(b.datum||""));
-    return sorted.map((p,i)=>({...p,versuch:i+1,sid:s.id,name:s.vorname+" "+s.nachname,klasse:s.klasse,prufort:s.prufort}));
+    return sorted.map((p,i)=>({...p,versuch:i+1,sid:s.id,name:s.vorname+" "+s.nachname,klasse:s.klasse,prufort:p.prufort||s.prufort}));
   });
   const gesamt=alle.length;
   const bestanden=alle.filter(p=>p.bestanden).length;
   const quote=gesamt?Math.round((bestanden/gesamt)*100):0;
   const v=[1,2,3,4].map(n=>({n,list:alle.filter(p=>p.versuch===n)}));
   const ortStats=PRUFORTE.map(o=>{
-    const ps=schueler.filter(s=>s.prufort===o).flatMap(s=>(s.pruefungen||[]).filter(p=>p.bestanden!==null&&p.bestanden!==undefined));
+    const ps=alle.filter(p=>(p.prufort||"")===o);
     const tot=ps.length,best=ps.filter(p=>p.bestanden).length;
     return{ort:o,tot,best,quote:tot?Math.round((best/tot)*100):null};
   }).filter(o=>o.tot>0);
