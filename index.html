@@ -513,7 +513,7 @@ function renderDashboard(dashDateOffset=0,fixedDate=null){
     <div class="topbar">
       <div style="display:flex;align-items:center;justify-content:space-between;width:100%;gap:8px">
         <button class="btn-icon-label" onclick="${fixedDate?"buildKalender()":"renderKalender()"}"><i class="ti ti-calendar"></i><span>Kalender</span></button>
-        <button class="btn-icon-label" onclick="renderAktiveSchueler()"><i class="ti ti-users"></i><span>Schüler</span></button>
+        <button class="btn-icon-label" onclick="renderSchuelerListe()"><i class="ti ti-users"></i><span>Schüler</span></button>
         <button class="btn-icon-label" onclick="renderStatistik()"><i class="ti ti-chart-bar"></i><span>Statistik</span></button>
         <button class="btn-icon-label" onclick="toggleDatenMenu()"><i class="ti ti-device-floppy"></i><span>Backup</span></button>
       </div>
@@ -767,40 +767,17 @@ function _schuelerCardHTML(s,heuteIds,sortMode){
   </div>`;
 }
 
-// ── AKTIVE SCHÜLER (von Dashboard-Kachel) ────────────────────────────────────
-function renderAktiveSchueler(){
+// ── SCHÜLERLISTE (Alle / Aktive / Nächste Termine) ───────────────────────────
+function renderSchuelerListe(mode="aktive",q=""){
   const td=todayStr();
   const heuteIds=new Set((termine[td]||[]).map(t=>t.sid));
-  const aktive=[...schueler.filter(s=>!(s.pruefungen||[]).some(p=>p.bestanden===true))]
-    .sort((a,b)=>_nextTerminDT(a).localeCompare(_nextTerminDT(b)));
-  let html=`<div class="screen active">
-    <div class="topbar">
-      <button class="btn-icon" onclick="renderDashboard()"><i class="ti ti-arrow-left"></i></button>
-      <span class="topbar-title">Aktive Schüler (${aktive.length})</span>
-      <button class="btn-icon" onclick="renderListe()" title="Alle Schüler"><i class="ti ti-list"></i></button>
-    </div>
-    <div class="scroll">`;
-  if(!aktive.length){
-    html+=`<div class="empty-hint"><i class="ti ti-users" style="font-size:32px;display:block;margin:0 auto 8px"></i>Keine aktiven Schüler</div>`;
-  }else{
-    aktive.forEach(s=>{html+=_schuelerCardHTML(s,heuteIds,"termin");});
-  }
-  html+=`</div></div>`;
-  renderApp(html);
-  initSwipe();
-  setTimeout(initPTR,50);
-}
-
-// ── SCHÜLERLISTE ──────────────────────────────────────────────────────────────
-function renderListe(q="",sortMode="termin"){
-  const td=todayStr();
-  const heuteIds=new Set((termine[td]||[]).map(t=>t.sid));
-  const basis=q?schueler.filter(s=>(s.vorname+" "+s.nachname+" "+(s.spitz||"")).toLowerCase().includes(q.toLowerCase())):schueler;
-
+  let basis=q?schueler.filter(s=>(s.vorname+" "+s.nachname+" "+(s.spitz||"")).toLowerCase().includes(q.toLowerCase())):schueler;
+  if(mode==="aktive")basis=basis.filter(s=>!(s.pruefungen||[]).some(p=>p.bestanden===true));
   const filtered=[...basis].sort((a,b)=>{
-    if(sortMode==="alpha") return a.nachname.localeCompare(b.nachname,"de");
+    if(mode==="alle")return a.nachname.localeCompare(b.nachname,"de");
     return _nextTerminDT(a).localeCompare(_nextTerminDT(b));
   });
+  const modes=[{key:"alle",label:"Alle Schüler"},{key:"aktive",label:"Aktive Schüler"},{key:"naechste",label:"Nächste Termine"}];
   let html=`<div class="screen active" id="scr-liste">
     <div class="topbar">
       <button class="btn-icon" onclick="renderDashboard()"><i class="ti ti-arrow-left"></i></button>
@@ -808,20 +785,19 @@ function renderListe(q="",sortMode="termin"){
       <button class="btn-icon" onclick="renderNeuSchueler()"><i class="ti ti-user-plus"></i></button>
     </div>
     <div class="scroll">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-        <span style="font-size:14px;color:var(--tx3)">${sortMode==="alpha"?"↑ A–Z":"↑ Nächster Termin"}</span>
-        <button onclick="renderListe('${q}','${sortMode==='termin'?'alpha':'termin'}')" style="font-size:14px;color:var(--accent);background:none;border:none;cursor:pointer;font-family:inherit;padding:0">Ändern</button>
+      <div style="display:flex;gap:6px;margin-bottom:10px">
+        ${modes.map(m=>`<button onclick="renderSchuelerListe('${m.key}','${q}')" style="flex:1;padding:9px 4px;border-radius:10px;border:none;font-size:13px;font-weight:${mode===m.key?700:400};cursor:pointer;font-family:inherit;background:${mode===m.key?'var(--accent)':'rgba(255,107,43,.08)'};color:${mode===m.key?'white':'var(--tx2)'}">${m.label}</button>`).join('')}
       </div>
       <div class="search-wrap">
         <i class="ti ti-search search-icon"></i>
-        <input type="search" placeholder="Suchen…" value="${q}" oninput="filterListeOnly(this.value,'${sortMode}')" id="search-input" style="padding-right:${q?'40px':'12px'}"/>
-        <button class="search-clear-x" onclick="renderListe('','${sortMode}')" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--tx3);font-size:21px;display:${q?'flex':'none'};align-items:center;padding:4px"><i class="ti ti-x"></i></button>
-      </div>`;
-  html+=`<div id="liste-items">`;
+        <input type="search" placeholder="Suchen…" value="${q}" oninput="filterListeOnly(this.value,'${mode}')" id="search-input" style="padding-right:${q?'40px':'12px'}"/>
+        <button class="search-clear-x" onclick="renderSchuelerListe('${mode}','')" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--tx3);font-size:21px;display:${q?'flex':'none'};align-items:center;padding:4px"><i class="ti ti-x"></i></button>
+      </div>
+      <div id="liste-items">`;
   if(!filtered.length){
     html+=`<div class="empty-hint"><i class="ti ti-search" style="font-size:32px;display:block;margin:0 auto 8px"></i>Keine Schüler gefunden</div>`;
   }else{
-    filtered.forEach(s=>{html+=_schuelerCardHTML(s,heuteIds,sortMode);});
+    filtered.forEach(s=>{html+=_schuelerCardHTML(s,heuteIds,mode==="alle"?"alpha":"termin");});
   }
   html+=`</div></div></div>`;
   renderApp(html);
@@ -830,27 +806,28 @@ function renderListe(q="",sortMode="termin"){
 }
 
 
-function filterListeOnly(q, sortMode){
+function filterListeOnly(q, mode){
   const container=document.getElementById("liste-items");
-  if(!container){renderListe(q,sortMode);return;}
+  if(!container){renderSchuelerListe(mode,q);return;}
 
   const clearBtns=document.querySelectorAll(".search-clear-x");
   clearBtns.forEach(b=>b.style.display=q?"flex":"none");
 
   const td=todayStr();
   const heuteIds=new Set((termine[td]||[]).map(t=>t.sid));
-  const basis=q?schueler.filter(s=>(s.vorname+" "+s.nachname+" "+(s.spitz||"")).toLowerCase().includes(q.toLowerCase())):schueler;
+  let basis=q?schueler.filter(s=>(s.vorname+" "+s.nachname+" "+(s.spitz||"")).toLowerCase().includes(q.toLowerCase())):schueler;
+  if(mode==="aktive")basis=basis.filter(s=>!(s.pruefungen||[]).some(p=>p.bestanden===true));
 
   const filtered=[...basis].sort((a,b)=>{
-    if(sortMode==="termin") return _nextTerminDT(a).localeCompare(_nextTerminDT(b));
-    return (heuteIds.has(a.id)?0:1)-(heuteIds.has(b.id)?0:1);
+    if(mode==="alle")return a.nachname.localeCompare(b.nachname,"de");
+    return _nextTerminDT(a).localeCompare(_nextTerminDT(b));
   });
 
   let html="";
   if(!filtered.length){
     html=`<div class="empty-hint"><i class="ti ti-search" style="font-size:32px;display:block;margin:0 auto 8px"></i>Keine Schüler gefunden</div>`;
   }else{
-    filtered.forEach(s=>{html+=_schuelerCardHTML(s,heuteIds,sortMode);});
+    filtered.forEach(s=>{html+=_schuelerCardHTML(s,heuteIds,mode==="alle"?"alpha":"termin");});
   }
   container.innerHTML=html;
   initSwipe();
@@ -908,7 +885,7 @@ function confirmDelete(sid){
 function _doDeleteSchueler(sid){
   closeModal();
   schueler=schueler.filter(x=>x.id!==sid);
-  saveAll();renderListe();
+  saveAll();renderSchuelerListe();
 }
 
 // ── TERMIN VON SCHÜLER AUS ─────────────────────────────────────────────────
@@ -1093,7 +1070,7 @@ function _doDeleteSchuelerFull(sid){
     termine[d]=termine[d].filter(t=>t.sid!==sid);
     if(!termine[d].length)delete termine[d];
   });
-  saveAll();renderListe();
+  saveAll();renderSchuelerListe();
 }
 
 // ── FOTO ──────────────────────────────────────────────────────────────────────
@@ -2307,7 +2284,7 @@ function renderDashSchueler(sid){
 
   let html=`<div class="screen active">
     <div class="topbar">
-      <button class="btn-icon" onclick="renderListe()"><i class="ti ti-arrow-left"></i></button>
+      <button class="btn-icon" onclick="renderSchuelerListe()"><i class="ti ti-arrow-left"></i></button>
       <span class="topbar-title">${s.vorname} ${s.nachname}</span>
       <button class="btn-icon" onclick="renderNeuSchueler('${sid}')"><i class="ti ti-pencil"></i></button>
     </div>
