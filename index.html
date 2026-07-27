@@ -1508,7 +1508,9 @@ function renderStatistik(){
   }).filter(o=>o.tot>0);
   const td2=todayStr();
   // Alle Prüfungen (offen + abgeschlossen) rein chronologisch, älteste zuerst
-  const alleSortiert=[...alleInklOffen].sort((a,b)=>(b.datum||"").localeCompare(a.datum||""));
+  const _pruefPending=alleInklOffen.filter(p=>p.bestanden===null||p.bestanden===undefined).sort((a,b)=>(a.datum||"").localeCompare(b.datum||""));
+  const _pruefDone=alleInklOffen.filter(p=>!(p.bestanden===null||p.bestanden===undefined)).sort((a,b)=>(b.datum||"").localeCompare(a.datum||""));
+  const alleSortiert=[..._pruefPending,..._pruefDone];
 
   let html=`<div class="screen active" id="scr-stat">
     <div class="topbar">
