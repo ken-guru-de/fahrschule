@@ -390,11 +390,13 @@ const GRUNDFAHRAUFGABEN=[
   {key:"rechts",      label:"Einparken quer",            icon:"ti-parking"},
   {key:"umkehr",      label:"Umkehren",                  icon:"ti-refresh"},
   {key:"rueckwaerts", label:"Rückwärts um die Ecke",     icon:"ti-corner-down-left"},
+  {key:"gefahrenbremsung",label:"Gefahrenbremsung",      icon:"ti-alert-triangle"},
+];
+const WEITERE_UEBUNGSPUNKTE=[
   {key:"stopp_mit",   label:"Stopschild mit Haltelinie", icon:"ti-octagon"},
   {key:"stopp_ohne",  label:"Stopschild ohne Haltelinie",icon:"ti-octagon-off"},
   {key:"stadtautobahn",label:"Stadtautobahn",            icon:"ti-road"},
   {key:"strassenbahn",label:"Straßenbahn",               icon:"ti-train"},
-  {key:"gefahrenbremsung",label:"Gefahrenbremsung",      icon:"ti-alert-triangle"},
   {key:"mehrspurig",  label:"Mehrspuriges Abbiegen",     icon:"ti-corner-up-right"},
 ];
 const SONDER=[{key:"ueberland",label:"Überlandfahrt",icon:"ti-trees",min:270},{key:"autobahn",label:"Autobahnfahrt",icon:"ti-road",min:225},{key:"nacht",label:"Nachtfahrt",icon:"ti-moon",min:135}];
@@ -2431,26 +2433,29 @@ function toggleNotizBadge(sid){
   setTimeout(()=>{initPTR();const ta=document.getElementById("notiz-screen-"+sid);if(ta)ta.focus();},100);
 }
 
+function _gfaTile(sid,g,cnt){
+  return `<div id="gfa-tile-${sid}-${g.key}" onclick="changeGFADash('${sid}','${g.key}',1)" style="position:relative;background:${cnt>0?'rgba(255,107,43,.08)':'var(--bg2)'};border:1.5px solid ${cnt>0?'var(--accent)':'var(--br)'};border-radius:16px;padding:14px 10px;text-align:center;cursor:pointer;user-select:none">
+      <button onclick="event.stopPropagation();changeGFADash('${sid}','${g.key}',-1)" style="position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;border:none;background:var(--bg);color:var(--tx3);font-size:16px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center">−</button>
+      <i class="ti ${g.icon}" id="gfa-icon-${sid}-${g.key}" style="font-size:24px;color:${cnt>0?'var(--accent)':'var(--tx3)'};margin-bottom:6px;display:block"></i>
+      <div style="font-size:13px;color:var(--tx2);min-height:32px;display:flex;align-items:center;justify-content:center;line-height:1.2">${g.label}</div>
+      <div class="gfa-count" id="gfa-${sid}-${g.key}-d" style="font-size:26px;font-weight:700;color:${cnt>0?'var(--accent)':'var(--tx)'};margin-top:4px">${cnt}</div>
+    </div>`;
+}
 function renderSchuelerGFA(sid){
   const s=getS(sid);if(!s)return;
   const gfaCount=GRUNDFAHRAUFGABEN.filter(g=>((s.gfa||{})[g.key]||0)>0).length;
-  const tiles=GRUNDFAHRAUFGABEN.map(g=>{
-    const cnt=(s.gfa||{})[g.key]||0;
-    return `<div id="gfa-tile-${s.id}-${g.key}" onclick="changeGFADash('${s.id}','${g.key}',1)" style="position:relative;background:${cnt>0?'rgba(255,107,43,.08)':'var(--bg2)'};border:1.5px solid ${cnt>0?'var(--accent)':'var(--br)'};border-radius:16px;padding:14px 10px;text-align:center;cursor:pointer;user-select:none">
-      <button onclick="event.stopPropagation();changeGFADash('${s.id}','${g.key}',-1)" style="position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;border:none;background:var(--bg);color:var(--tx3);font-size:16px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center">−</button>
-      <i class="ti ${g.icon}" id="gfa-icon-${s.id}-${g.key}" style="font-size:24px;color:${cnt>0?'var(--accent)':'var(--tx3)'};margin-bottom:6px;display:block"></i>
-      <div style="font-size:13px;color:var(--tx2);min-height:32px;display:flex;align-items:center;justify-content:center;line-height:1.2">${g.label}</div>
-      <div class="gfa-count" id="gfa-${s.id}-${g.key}-d" style="font-size:26px;font-weight:700;color:${cnt>0?'var(--accent)':'var(--tx)'};margin-top:4px">${cnt}</div>
-    </div>`;
-  }).join('');
+  const tiles=GRUNDFAHRAUFGABEN.map(g=>_gfaTile(s.id,g,(s.gfa||{})[g.key]||0)).join('');
+  const weitereTiles=WEITERE_UEBUNGSPUNKTE.map(g=>_gfaTile(s.id,g,(s.gfa||{})[g.key]||0)).join('');
   const html=`<div class="screen active">
     <div class="topbar">
       <button class="btn-icon" onclick="renderDashSchueler('${sid}')"><i class="ti ti-arrow-left"></i></button>
       <span class="topbar-title"><i class="ti ti-steering-wheel" style="margin-right:6px"></i>Grundfahraufgaben · ${s.vorname}</span>
     </div>
     <div class="scroll">
-      <div style="font-size:15px;color:var(--tx3);margin-bottom:10px">${gfaCount}/${GRUNDFAHRAUFGABEN.length} begonnen · antippen zum Zählen</div>
+      <div id="gfa-header-count" style="font-size:15px;color:var(--tx3);margin-bottom:10px">${gfaCount}/${GRUNDFAHRAUFGABEN.length} begonnen · antippen zum Zählen</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${tiles}</div>
+      <div style="font-size:14px;color:var(--tx3);margin:18px 0 8px;text-transform:uppercase;letter-spacing:.04em;font-weight:600">Weitere Übungspunkte</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${weitereTiles}</div>
       <button class="btn-full" style="margin-top:14px" onclick="renderDashSchueler('${sid}')"><i class="ti ti-arrow-left"></i> Zurück</button>
     </div>
   </div>`;
@@ -2519,8 +2524,8 @@ function changeGFADash(sid,key,d){
   if(countEl){countEl.textContent=cnt;countEl.style.color=cnt>0?"var(--accent)":"var(--tx)";}
   if(tile){tile.style.background=cnt>0?"rgba(255,107,43,.08)":"var(--bg2)";tile.style.borderColor=cnt>0?"var(--accent)":"var(--br)";}
   if(iconEl){iconEl.style.color=cnt>0?"var(--accent)":"var(--tx3)";}
-  const cntHeader=document.querySelector("#app .scroll > div:first-child");
-  if(cntHeader){const gfaCount=GRUNDFAHRAUFGABEN.filter(g=>((s.gfa||{})[g.key]||0)>0).length;cntHeader.textContent=gfaCount+"/"+GRUNDFAHRAUFGABEN.length+" begonnen · antippen zum Zählen";}
+  const header=document.getElementById("gfa-header-count");
+  if(header){const gfaCount=GRUNDFAHRAUFGABEN.filter(g=>((s.gfa||{})[g.key]||0)>0).length;header.textContent=gfaCount+"/"+GRUNDFAHRAUFGABEN.length+" begonnen · antippen zum Zählen";}
 }
 
 function toggleFahrstundenDash(sid, type) {
