@@ -2267,7 +2267,7 @@ function renderDashSchueler(sid){
         <div style="flex:1">
           <div style="font-size:20px;font-weight:700">${s.vorname} ${s.nachname}${s.spitz?` <span style="font-size:15px;color:var(--tx3);font-weight:400">«${s.spitz}»</span>`:''}</div>
           <div style="font-size:15px;color:var(--tx2);margin-top:2px">Klasse ${s.klasse} · Beginn ${fmtDate(s.beginn).day}. ${fmtDate(s.beginn).mon} ${fmtDate(s.beginn).year}</div>
-          <div style="font-size:15px;color:var(--tx2)">${s.prufort||''}</div>
+          <div style="font-size:15px;color:var(--tx2)">${(()=>{const _offen=(s.pruefungen||[]).find(p=>p.bestanden===null||p.bestanden===undefined);const _last=(s.pruefungen||[]).slice().sort((a,b)=>b.datum.localeCompare(a.datum))[0];const _po=(_offen&&_offen.prufort)||(_last&&_last.prufort)||s.prufort||'';return _po;})()}</div>
         </div>
       </div>
 
