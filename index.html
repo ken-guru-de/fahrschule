@@ -395,6 +395,7 @@ const GRUNDFAHRAUFGABEN=[
   {key:"stadtautobahn",label:"Stadtautobahn",            icon:"ti-road"},
   {key:"strassenbahn",label:"Straßenbahn",               icon:"ti-train"},
   {key:"gefahrenbremsung",label:"Gefahrenbremsung",      icon:"ti-alert-triangle"},
+  {key:"mehrspurig",  label:"Mehrspuriges Abbiegen",     icon:"ti-corner-up-right"},
 ];
 const SONDER=[{key:"ueberland",label:"Überlandfahrt",icon:"ti-trees",min:270},{key:"autobahn",label:"Autobahnfahrt",icon:"ti-road",min:225},{key:"nacht",label:"Nachtfahrt",icon:"ti-moon",min:135}];
 const MONATE=["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
@@ -1012,7 +1013,7 @@ function saveSchueler(editSid){
     }
     saveAll();syncFahrstundenToKalender();renderDashSchueler(editSid);
   }else{
-    const tel2=document.getElementById('n-tel').value.trim();const ptuhr='';const ns={id:"s"+Date.now(),vorname:vn,nachname:nn,spitz:sp,geschlecht:AppState.geschlecht||'m',tel:tel2,farbe:AppState.selFarbe||"blue",klasse:kl,beginn:bg,prufort:pf,prueftermin:pt,pruefzeit:ptuhr,theorie:th,sonder:[false,false,false],notiz:"",fahrstunden:[],pruefungen:[],gfa:{laengs:0,rechts:0,umkehr:0,rueckwaerts:0,stopp_mit:0,stopp_ohne:0,stadtautobahn:0,strassenbahn:0,gefahrenbremsung:0},foto:null};
+    const tel2=document.getElementById('n-tel').value.trim();const ptuhr='';const ns={id:"s"+Date.now(),vorname:vn,nachname:nn,spitz:sp,geschlecht:AppState.geschlecht||'m',tel:tel2,farbe:AppState.selFarbe||"blue",klasse:kl,beginn:bg,prufort:pf,prueftermin:pt,pruefzeit:ptuhr,theorie:th,sonder:[false,false,false],notiz:"",fahrstunden:[],pruefungen:[],gfa:{laengs:0,rechts:0,umkehr:0,rueckwaerts:0,stopp_mit:0,stopp_ohne:0,stadtautobahn:0,strassenbahn:0,gefahrenbremsung:0,mehrspurig:0},foto:null};
     schueler.push(ns);
     saveAll();
     syncKalenderToFahrstunden();
@@ -2435,9 +2436,9 @@ function renderSchuelerGFA(sid){
   const gfaCount=GRUNDFAHRAUFGABEN.filter(g=>((s.gfa||{})[g.key]||0)>0).length;
   const tiles=GRUNDFAHRAUFGABEN.map(g=>{
     const cnt=(s.gfa||{})[g.key]||0;
-    return `<div onclick="changeGFADash('${s.id}','${g.key}',1)" style="position:relative;background:${cnt>0?'rgba(255,107,43,.08)':'var(--bg2)'};border:1.5px solid ${cnt>0?'var(--accent)':'var(--br)'};border-radius:16px;padding:14px 10px;text-align:center;cursor:pointer;user-select:none">
+    return `<div id="gfa-tile-${s.id}-${g.key}" onclick="changeGFADash('${s.id}','${g.key}',1)" style="position:relative;background:${cnt>0?'rgba(255,107,43,.08)':'var(--bg2)'};border:1.5px solid ${cnt>0?'var(--accent)':'var(--br)'};border-radius:16px;padding:14px 10px;text-align:center;cursor:pointer;user-select:none">
       <button onclick="event.stopPropagation();changeGFADash('${s.id}','${g.key}',-1)" style="position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;border:none;background:var(--bg);color:var(--tx3);font-size:16px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center">−</button>
-      <i class="ti ${g.icon}" style="font-size:24px;color:${cnt>0?'var(--accent)':'var(--tx3)'};margin-bottom:6px;display:block"></i>
+      <i class="ti ${g.icon}" id="gfa-icon-${s.id}-${g.key}" style="font-size:24px;color:${cnt>0?'var(--accent)':'var(--tx3)'};margin-bottom:6px;display:block"></i>
       <div style="font-size:13px;color:var(--tx2);min-height:32px;display:flex;align-items:center;justify-content:center;line-height:1.2">${g.label}</div>
       <div class="gfa-count" id="gfa-${s.id}-${g.key}-d" style="font-size:26px;font-weight:700;color:${cnt>0?'var(--accent)':'var(--tx)'};margin-top:4px">${cnt}</div>
     </div>`;
@@ -2511,7 +2512,15 @@ function changeGFADash(sid,key,d){
   if(!s.gfa)s.gfa={};
   s.gfa[key]=Math.max(0,(s.gfa[key]||0)+d);
   saveAll();
-  renderSchuelerGFA(sid);
+  const cnt=s.gfa[key];
+  const tile=document.getElementById("gfa-tile-"+sid+"-"+key);
+  const countEl=document.getElementById("gfa-"+sid+"-"+key+"-d");
+  const iconEl=document.getElementById("gfa-icon-"+sid+"-"+key);
+  if(countEl){countEl.textContent=cnt;countEl.style.color=cnt>0?"var(--accent)":"var(--tx)";}
+  if(tile){tile.style.background=cnt>0?"rgba(255,107,43,.08)":"var(--bg2)";tile.style.borderColor=cnt>0?"var(--accent)":"var(--br)";}
+  if(iconEl){iconEl.style.color=cnt>0?"var(--accent)":"var(--tx3)";}
+  const cntHeader=document.querySelector("#app .scroll > div:first-child");
+  if(cntHeader){const gfaCount=GRUNDFAHRAUFGABEN.filter(g=>((s.gfa||{})[g.key]||0)>0).length;cntHeader.textContent=gfaCount+"/"+GRUNDFAHRAUFGABEN.length+" begonnen · antippen zum Zählen";}
 }
 
 function toggleFahrstundenDash(sid, type) {
