@@ -662,7 +662,7 @@ function renderDashboard(dashDateOffset=0,fixedDate=null){
         </div>
       </div>${_wrapClose}`;
     });
-    html+=`<div id="timeline-container" data-range-start="${rangeStart}" data-px-per-min="${PX_PER_MIN}" data-range-end="${rangeEnd}" style="position:relative;height:${totalPx}px;margin-bottom:12px">${gridHtml}${nowHtml}${cardsHtml}</div>`;
+    html+=`<div id="timeline-container" data-range-start="${rangeStart}" data-px-per-min="${PX_PER_MIN}" data-range-end="${rangeEnd}" style="position:relative;height:${totalPx}px;margin-bottom:12px;margin-left:-16px;width:calc(100% + 16px)">${gridHtml}${nowHtml}${cardsHtml}</div>`;
   }else{
     html+=`<div style="padding:12px 0;font-size:15px;color:var(--tx3)">Keine Termine geplant</div>`;
   }
