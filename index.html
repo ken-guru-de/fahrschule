@@ -2090,15 +2090,6 @@ function toggleDatenMenu(){
   btnSave.innerHTML='<i class="ti ti-download"></i> Daten sichern';
   btnSave.onclick=function(){overlay.remove();exportDaten();};
   sheet.appendChild(btnSave);
-  // Wiederherstellen Datei
-  var lbl=document.createElement("label");
-  lbl.style.cssText="width:100%;padding:14px;border-radius:14px;border:1.5px solid var(--accent);background:rgba(255,107,43,.1);color:#FF6B2B;font-size:18px;font-weight:600;text-align:center;cursor:pointer;box-sizing:border-box;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px";
-  lbl.innerHTML='<i class="ti ti-upload"></i> Wiederherstellen (Datei)';
-  var fileInput=document.createElement("input");
-  fileInput.type="file";fileInput.accept=".json";fileInput.style.display="none";
-  fileInput.onchange=function(){overlay.remove();importDaten(this);};
-  lbl.appendChild(fileInput);
-  sheet.appendChild(lbl);
   // Einfügen JSON
   var btnPaste=document.createElement("button");
   btnPaste.style.cssText="width:100%;padding:14px;border-radius:14px;border:1.5px solid var(--accent);background:rgba(255,107,43,.06);color:#FF6B2B;font-size:18px;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px";
