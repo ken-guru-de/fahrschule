@@ -576,17 +576,55 @@ function renderDashboard(dashDateOffset=0,fixedDate=null){
       </div>
     </div>`;
   if(anzeigeTermine.length){
-    // Kartenhöhe proportional zur Dauer: 80 min ≈ Standardhöhe, längere Termine entsprechend höher
-    const _hMin=m=>Math.max(70,Math.round((m||80)*0.9));
+    const PX_PER_MIN=1.4;
+    const _toMin=uhr=>{const [h,m]=uhr.split(":").map(Number);return h*60+m;};
+    let rangeStart=Math.min(...anzeigeTermine.map(t=>_toMin(t.uhr)))-30;
+    let rangeEnd=Math.max(...anzeigeTermine.map(t=>_toMin(t.uhr)+(t.min||80)))+30;
+    rangeStart=Math.max(0,Math.floor(rangeStart/60)*60);
+    rangeEnd=Math.min(24*60,Math.ceil(rangeEnd/60)*60);
+    const totalPx=Math.round((rangeEnd-rangeStart)*PX_PER_MIN);
+    const _GUTTER=40;
+
+    // Stunden-Gitter
+    let gridHtml="";
+    for(let m=rangeStart;m<=rangeEnd;m+=60){
+      const top=Math.round((m-rangeStart)*PX_PER_MIN);
+      const hh=String(Math.floor(m/60)%24).padStart(2,"0");
+      gridHtml+=`<div style="position:absolute;top:${top}px;left:${_GUTTER}px;right:0;border-top:1px solid var(--br2)"></div>
+        <div style="position:absolute;top:${top-7}px;left:0;font-size:11px;color:var(--tx3);width:${_GUTTER-6}px;text-align:right">${hh}</div>`;
+    }
+
+    // Jetzt-Linie (nur wenn heutiger Tag angezeigt wird und die Uhrzeit im sichtbaren Bereich liegt)
+    let nowHtml="";
+    if(anzeigeDatum===td){
+      const _now=new Date();
+      const nowMin=_now.getHours()*60+_now.getMinutes();
+      if(nowMin>=rangeStart&&nowMin<=rangeEnd){
+        const top=Math.round((nowMin-rangeStart)*PX_PER_MIN);
+        const nowLbl=String(_now.getHours()).padStart(2,"0")+":"+String(_now.getMinutes()).padStart(2,"0");
+        nowHtml=`<div id="now-line" style="position:absolute;top:${top}px;left:${_GUTTER}px;right:0;height:0;border-top:2px solid #E24B4A;z-index:5;pointer-events:none">
+          <span style="position:absolute;left:-4px;top:-4.5px;width:9px;height:9px;border-radius:50%;background:#E24B4A"></span>
+        </div>
+        <div style="position:absolute;top:${top-8}px;left:0;width:${_GUTTER-4}px;text-align:right;font-size:11px;font-weight:700;color:#E24B4A;z-index:5">${nowLbl}</div>`;
+      }
+    }
+
+    // Kartenhöhe: exakt proportional zur Dauer auf der Zeitskala (Mindesthöhe für Lesbarkeit)
+    const _hMin=m=>Math.max(46,Math.round((m||80)*PX_PER_MIN));
+    let cardsHtml="";
     anzeigeTermine.forEach((t,ti)=>{
+      const _top=Math.round((_toMin(t.uhr)-rangeStart)*PX_PER_MIN);
+      const _height=_hMin(t.min);
+      const _wrapOpen=`<div style="position:absolute;top:${_top}px;left:${_GUTTER}px;right:0;height:${_height}px">`;
+      const _wrapClose=`</div>`;
       if(t.typ==="theorie"||(t.sid&&t.sid.startsWith("__theorie__"))){
         const titel=(t.sid&&t.sid.indexOf(":")>=0)?t.sid.split(":").slice(1).join(":"):"Theorie";
         const endZeitT=(()=>{const [h,m]=t.uhr.split(":").map(Number);const tot=h*60+m+t.min;return String(Math.floor(tot/60)%24).padStart(2,"0")+":"+String(tot%60).padStart(2,"0");})();
         const realIdxT=(termine[anzeigeDatum]||[]).findIndex(x=>x===t);
         const _elIdT=`swipe-dt-${anzeigeDatum}-${realIdxT}`;
-        html+=`<div class="swipe-wrap">
+        cardsHtml+=`${_wrapOpen}<div class="swipe-wrap" style="height:100%;margin-bottom:0">
           <div class="swipe-del-bg" onclick="_confirmDelDashTermin('${anzeigeDatum}',${realIdxT})"><i class="ti ti-trash"></i></div>
-          <div class="swipe-item list-item" id="${_elIdT}" style="user-select:none;min-height:${_hMin(t.min)}px"
+          <div class="swipe-item list-item" id="${_elIdT}" style="user-select:none;height:100%"
             onclick="handleDashTerminTap('${_elIdT}',null)"
             oncontextmenu="event.preventDefault();showTerminActions('${anzeigeDatum}',${realIdxT},'')"
             ontouchstart="_lpStart(event,'${anzeigeDatum}',${realIdxT},'')"
@@ -595,7 +633,7 @@ function renderDashboard(dashDateOffset=0,fixedDate=null){
             <div class="item-info"><div class="item-name">${titel}</div><div class="item-sub">${t.uhr}–${endZeitT}Uhr · ${t.min} min${t.notiz?" · "+t.notiz:""}</div></div>
             <span class="badge" style="background:rgba(0,0,0,0.06);color:var(--tx2)">Theorie</span>
           </div>
-        </div>`;
+        </div>${_wrapClose}`;
         return;
       }
       const s=getS(t.sid);if(!s)return;
@@ -610,12 +648,11 @@ function renderDashboard(dashDateOffset=0,fixedDate=null){
       const fieldTxtT=fieldHexT?(sonderTypT==='ueberland'?"#141414":"#ffffff"):"";
       const fieldTxt2T=fieldHexT?(sonderTypT==='ueberland'?"rgba(20,20,20,.75)":"rgba(255,255,255,.8)"):"";
       const endZeit=(()=>{const [h,m]=t.uhr.split(":").map(Number);const tot=h*60+m+t.min;return String(Math.floor(tot/60)%24).padStart(2,"0")+":"+String(tot%60).padStart(2,"0");})();
-      const tIdx=Object.values(termine[anzeigeDatum]||[]).indexOf(t);
       const realIdx=(termine[anzeigeDatum]||[]).findIndex((x,i)=>x===t||( x.sid===t.sid&&x.uhr===t.uhr&&x.min===t.min));
       const _elId=`swipe-dt-${anzeigeDatum}-${realIdx}`;
-      html+=`<div class="swipe-wrap">
+      cardsHtml+=`${_wrapOpen}<div class="swipe-wrap" style="height:100%;margin-bottom:0">
         <div class="swipe-del-bg" onclick="_confirmDelDashTermin('${anzeigeDatum}',${realIdx})"><i class="ti ti-trash"></i></div>
-        <div class="swipe-item list-item" id="${_elId}" style="user-select:none;min-height:${_hMin(t.min)}px${fieldHexT?`;background:${fieldHexT}`:""}"
+        <div class="swipe-item list-item" id="${_elId}" style="user-select:none;height:100%${fieldHexT?`;background:${fieldHexT}`:""}"
           onclick="handleDashTerminTap('${_elId}','${s.id}')"
           oncontextmenu="event.preventDefault();showTerminActions('${anzeigeDatum}',${realIdx},'${s.id}')"
           ontouchstart="_lpStart(event,'${anzeigeDatum}',${realIdx},'${s.id}')"
@@ -626,8 +663,9 @@ function renderDashboard(dashDateOffset=0,fixedDate=null){
           ${isPruefT?`<span class="badge" style="background:#E24B4A;color:white">Prüfung</span>`:`<span class="badge badge-${s.klasse}">${s.klasse}</span>`}
           <i class="ti ti-chevron-right" style="color:${fieldTxt2T||"var(--tx3)"};font-size:18px"></i>
         </div>
-      </div>`;
+      </div>${_wrapClose}`;
     });
+    html+=`<div id="timeline-container" data-range-start="${rangeStart}" data-px-per-min="${PX_PER_MIN}" data-range-end="${rangeEnd}" style="position:relative;height:${totalPx}px;margin-bottom:12px">${gridHtml}${nowHtml}${cardsHtml}</div>`;
   }else{
     html+=`<div style="padding:12px 0;font-size:15px;color:var(--tx3)">Keine Termine geplant</div>`;
   }
@@ -667,6 +705,25 @@ function renderDashboard(dashDateOffset=0,fixedDate=null){
     const box=document.getElementById("dash-day-box");
     if(box)box.style.textAlign="center";
   },10);
+  if(window._nowLineInterval)clearInterval(window._nowLineInterval);
+  if(anzeigeDatum===td&&anzeigeTermine.length){
+    window._nowLineInterval=setInterval(_updateNowLine,30000);
+  }
+}
+function _updateNowLine(){
+  const cont=document.getElementById("timeline-container");
+  const line=document.getElementById("now-line");
+  if(!cont||!line){if(window._nowLineInterval)clearInterval(window._nowLineInterval);return;}
+  const rangeStart=parseFloat(cont.dataset.rangeStart);
+  const rangeEnd=parseFloat(cont.dataset.rangeEnd);
+  const pxPerMin=parseFloat(cont.dataset.pxPerMin);
+  const _now=new Date();
+  const nowMin=_now.getHours()*60+_now.getMinutes();
+  if(nowMin<rangeStart||nowMin>rangeEnd){clearInterval(window._nowLineInterval);return;}
+  const top=Math.round((nowMin-rangeStart)*pxPerMin);
+  line.style.top=top+"px";
+  const lbl=line.nextElementSibling;
+  if(lbl){lbl.style.top=(top-8)+"px";lbl.textContent=String(_now.getHours()).padStart(2,"0")+":"+String(_now.getMinutes()).padStart(2,"0");}
 }
 
 // ── SCHÜLER LISTE HELPER ──────────────────────────────────────────────────────
