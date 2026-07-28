@@ -837,11 +837,15 @@ function filterListeOnly(q, mode){
 function initSwipe(){
   document.querySelectorAll(".swipe-item").forEach(el=>{
     const sid=el.id.replace("swipe-","");
-    let startX,startY,dragging=false;
-    el.addEventListener("touchstart",e=>{startX=e.touches[0].clientX;startY=e.touches[0].clientY;dragging=false;},{passive:true});
+    let startX,startY,dragging=false,locked=false;
+    el.addEventListener("touchstart",e=>{startX=e.touches[0].clientX;startY=e.touches[0].clientY;dragging=false;locked=false;},{passive:true});
     el.addEventListener("touchmove",e=>{
+      if(locked)return;
       const dx=e.touches[0].clientX-startX,dy=e.touches[0].clientY-startY;
-      if(!dragging&&Math.abs(dy)>Math.abs(dx)+5)return;
+      if(!dragging){
+        if(Math.abs(dy)>8&&Math.abs(dy)>Math.abs(dx)){locked=true;return;}
+        if(Math.abs(dx)<10||Math.abs(dx)<=Math.abs(dy))return;
+      }
       dragging=true;
       const base=el.classList.contains("swiped")?-80:0;
       el.style.transition="none";
