@@ -384,19 +384,19 @@ const FARBEN=[{key:"blue",bg:"#B5D4F4",tx:"#0C447C"},{key:"teal",bg:"#9FE1CB",tx
 const KLASSEN=["B","BA","B197","B17"];
 const PRUFORTE=["DEKRA Pankow","DEKRA Ferdi","TÜV Hornbach"];
 const GRUNDFAHRAUFGABEN=[
-  {key:"laengs",      label:"Einparken längs",          icon:"ti-car"},
-  {key:"rechts",      label:"Einparken quer",            icon:"ti-parking"},
+  {key:"laengs",      label:"Einparken längs",          icon:"parkschild"},
+  {key:"rechts",      label:"Einparken quer",            icon:"parkschild"},
   {key:"umkehr",      label:"Umkehren",                  icon:"ti-refresh"},
-  {key:"rueckwaerts", label:"Rückwärts um die Ecke",     icon:"ti-corner-down-left"},
-  {key:"gefahrenbremsung",label:"Gefahrenbremsung",      icon:"ti-alert-triangle"},
+  {key:"rueckwaerts", label:"Rückwärts um die Ecke",     icon:"ti-corner-down-right"},
+  {key:"gefahrenbremsung",label:"Gefahrenbremsung",      icon:"bremsauto"},
 ];
 const WEITERE_UEBUNGSPUNKTE=[
   {key:"stopp_mit",   label:"Stopschild mit Haltelinie", icon:"ti-octagon"},
   {key:"stopp_ohne",  label:"Stopschild ohne Haltelinie",icon:"ti-octagon-off"},
   {key:"stadtautobahn",label:"Stadtautobahn",            icon:"ti-road"},
   {key:"strassenbahn",label:"Straßenbahn",               icon:"ti-train"},
-  {key:"mehrspurig_links",  label:"",  icon:"ti-corner-up-left"},
-  {key:"mehrspurig_rechts", label:"", icon:"ti-corner-up-right"},
+  {key:"mehrspurig_links",  label:"",  icon:"ti-corner-up-left", dual:true},
+  {key:"mehrspurig_rechts", label:"", icon:"ti-corner-up-right", dual:true},
   {key:"zone30",       label:"Zone 30",                   icon:"ti-gauge"},
 ];
 const SONDER=[{key:"ueberland",label:"Überlandfahrt",icon:"ti-trees",min:270},{key:"autobahn",label:"Autobahnfahrt",icon:"ti-road",min:225},{key:"nacht",label:"Nachtfahrt",icon:"ti-moon",min:135}];
@@ -2499,7 +2499,10 @@ function toggleNotizBadge(sid,returnDate){
 function _gfaTile(sid,g,cnt){
   return `<div id="gfa-tile-${sid}-${g.key}" onclick="changeGFADash('${sid}','${g.key}',1)" style="position:relative;background:${cnt>0?'rgba(255,107,43,.08)':'var(--bg2)'};border:1.5px solid ${cnt>0?'var(--accent)':'var(--br)'};border-radius:16px;padding:14px 10px;text-align:center;cursor:pointer;user-select:none">
       <button onclick="event.stopPropagation();changeGFADash('${sid}','${g.key}',-1)" style="position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;border:none;background:var(--bg);color:var(--tx3);font-size:16px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center">−</button>
-      <i class="ti ${g.icon}" id="gfa-icon-${sid}-${g.key}" style="font-size:24px;color:${cnt>0?'var(--accent)':'var(--tx3)'};margin-bottom:6px;display:block"></i>
+      ${g.icon==="parkschild"?`<div id="gfa-icon-${sid}-${g.key}" style="width:26px;height:26px;border-radius:6px;background:#0057A8;color:#fff;font-size:18px;font-weight:800;display:flex;align-items:center;justify-content:center;margin:0 auto 6px;font-family:inherit;opacity:${cnt>0?1:0.55}">P</div>`
+        :g.icon==="bremsauto"?`<svg id="gfa-icon-${sid}-${g.key}" viewBox="0 0 32 32" width="26" height="26" style="display:block;margin:0 auto 6px;opacity:${cnt>0?1:0.55}"><g fill="none" stroke="${cnt>0?'var(--accent)':'var(--tx3)'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20 L12.5 15 Q13.5 12 17 12 L21 12 Q24 12 25 15 L26.5 20"/><rect x="8" y="20" width="21" height="5" rx="2.5"/><circle cx="13" cy="26" r="2" fill="${cnt>0?'var(--accent)':'var(--tx3)'}" stroke="none"/><circle cx="24" cy="26" r="2" fill="${cnt>0?'var(--accent)':'var(--tx3)'}" stroke="none"/></g><g stroke="${cnt>0?'var(--accent)':'var(--tx3)'}" stroke-width="2" stroke-linecap="round"><line x1="1" y1="16" x2="5" y2="16"/><line x1="1" y1="21" x2="4" y2="21"/></g></svg>`
+        :g.dual?`<div style="display:flex;gap:2px;justify-content:center;margin-bottom:6px"><i class="ti ${g.icon}" id="gfa-icon-${sid}-${g.key}" style="font-size:22px;color:${cnt>0?'var(--accent)':'var(--tx3)'}"></i><i class="ti ${g.icon}" style="font-size:22px;color:${cnt>0?'var(--accent)':'var(--tx3)'}"></i></div>`
+        :`<i class="ti ${g.icon}" id="gfa-icon-${sid}-${g.key}" style="font-size:24px;color:${cnt>0?'var(--accent)':'var(--tx3)'};margin-bottom:6px;display:block"></i>`}
       ${g.label?`<div style="font-size:13px;color:var(--tx2);min-height:32px;display:flex;align-items:center;justify-content:center;line-height:1.2">${g.label}</div>`:''}
       <div class="gfa-count" id="gfa-${sid}-${g.key}-d" style="font-size:26px;font-weight:700;color:${cnt>0?'#378ADD':'var(--tx)'};margin-top:4px">${cnt}</div>
     </div>`;
@@ -2582,11 +2585,10 @@ function changeGFADash(sid,key,d){
   saveAll();
   const cnt=s.gfa[key];
   const tile=document.getElementById("gfa-tile-"+sid+"-"+key);
-  const countEl=document.getElementById("gfa-"+sid+"-"+key+"-d");
-  const iconEl=document.getElementById("gfa-icon-"+sid+"-"+key);
-  if(countEl){countEl.textContent=cnt;countEl.style.color=cnt>0?"#378ADD":"var(--tx)";}
-  if(tile){tile.style.background=cnt>0?"rgba(255,107,43,.08)":"var(--bg2)";tile.style.borderColor=cnt>0?"var(--accent)":"var(--br)";}
-  if(iconEl){iconEl.style.color=cnt>0?"var(--accent)":"var(--tx3)";}
+  if(tile){
+    const g=[...GRUNDFAHRAUFGABEN,...WEITERE_UEBUNGSPUNKTE].find(x=>x.key===key);
+    if(g)tile.outerHTML=_gfaTile(sid,g,cnt);
+  }
   const header=document.getElementById("gfa-header-count");
   if(header){const gfaCount=GRUNDFAHRAUFGABEN.filter(g=>((s.gfa||{})[g.key]||0)>0).length;header.textContent=gfaCount+"/"+GRUNDFAHRAUFGABEN.length+" begonnen · antippen zum Zählen";}
 }
