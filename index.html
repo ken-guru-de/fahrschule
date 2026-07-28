@@ -651,7 +651,7 @@ function renderDashboard(dashDateOffset=0,fixedDate=null){
       cardsHtml+=`${_wrapOpen}<div class="swipe-wrap" style="height:100%;margin-bottom:0">
         <div class="swipe-del-bg" onclick="_confirmDelDashTermin('${anzeigeDatum}',${realIdx})"><i class="ti ti-trash"></i></div>
         <div class="swipe-item list-item" id="${_elId}" style="user-select:none;height:100%;box-shadow:0 12px 34px rgba(0,0,0,0.5)${fieldHexT?`;background:${fieldHexT}`:""}"
-          onclick="handleDashTerminTap('${_elId}','${s.id}')"
+          onclick="handleDashTerminTap('${_elId}','${s.id}','${anzeigeDatum}')"
           oncontextmenu="event.preventDefault();showTerminActions('${anzeigeDatum}',${realIdx},'${s.id}')"
           ontouchstart="_lpStart(event,'${anzeigeDatum}',${realIdx},'${s.id}')"
           ontouchend="_lpEnd()"
@@ -862,10 +862,10 @@ function handleTap(sid){
   if(el&&el.classList.contains("swiped")){el.style.transition="transform .2s ease";el.style.transform="translateX(0)";el.classList.remove("swiped");return;}
   renderDashSchueler(sid);
 }
-function handleDashTerminTap(elId,sid){
+function handleDashTerminTap(elId,sid,returnDate){
   const el=document.getElementById(elId);
   if(el&&el.classList.contains("swiped")){el.style.transition="transform .2s ease";el.style.transform="translateX(0)";el.classList.remove("swiped");return;}
-  if(sid)renderDashSchueler(sid);
+  if(sid)renderDashSchueler(sid,returnDate);
 }
 function handleTagTerminTap(elId,date,idx){
   const el=document.getElementById(elId);
@@ -903,17 +903,17 @@ function renderSchueler(sid){renderDashSchueler(sid);}
 
 
 // ── SCHÜLER ANLEGEN/BEARBEITEN ────────────────────────────────────────────────
-function renderNeuSchueler(fromSid){
+function renderNeuSchueler(fromSid,returnDate){
   const s=fromSid?getS(fromSid):null;
   let selFarbe=s?s.farbe:"blue";
   const title=s?"Schüler bearbeiten":"Neuer Schüler";
-  const back=s?`renderDashSchueler('${s.id}')`:"renderDashboard()";
+  const back=s?`renderDashSchueler('${s.id}','${returnDate||""}')`:"renderDashboard()";
   let html=`<div class="screen active" id="scr-neu">
     <div class="topbar">
       <button class="btn-icon" onclick="${back}"><i class="ti ti-arrow-left"></i></button>
       <span class="topbar-title">${title}</span>
     </div>
-    <div class="scroll">
+    <div class="scroll" id="neu-scroll" data-return-date="${returnDate||""}">
       <div id="toast-neu" class="toast"><i class="ti ti-circle-check" style="font-size:18px"></i><span id="toast-neu-msg"></span></div>
       <div><div class="sec-label">Name</div>
       <div class="card" style="margin-bottom:12px;padding:16px;display:flex;align-items:center;gap:16px">
@@ -966,7 +966,7 @@ function renderNeuSchueler(fromSid){
         </div>`:''}
       </div></div>
 
-      <button class="btn-full" onclick="saveSchueler('${s?s.id:""}')">${s?"Änderungen speichern":"Schüler speichern"}</button>
+      <button class="btn-full" onclick="saveSchueler('${s?s.id:""}',document.getElementById('neu-scroll').dataset.returnDate)">${s?"Änderungen speichern":"Schüler speichern"}</button>
       ${s?`<button class="btn-full danger" style="margin-top:6px" onclick="deleteSchueler('${s.id}')"><i class="ti ti-trash"></i> Schüler löschen</button>`:""}
     </div>
   </div>`;
@@ -1004,7 +1004,7 @@ function setGeschlecht(g){
   if(gm)gm.classList.toggle("active",g==="m");
   if(gw)gw.classList.toggle("active",g==="w");
 }
-function saveSchueler(editSid){
+function saveSchueler(editSid,returnDate){
   const vn=document.getElementById("n-vn").value.trim();
   const nn=document.getElementById("n-nn").value.trim();
   const kl=document.getElementById("n-kl").value;
@@ -1044,7 +1044,7 @@ function saveSchueler(editSid){
       s.pruefungen=s.pruefungen.filter(p=>p.datum); // leere entfernen
       s.pruefungen.sort((a,b)=>a.datum.localeCompare(b.datum));
     }
-    saveAll();syncFahrstundenToKalender();renderDashSchueler(editSid);
+    saveAll();syncFahrstundenToKalender();renderDashSchueler(editSid,returnDate);
   }else{
     const tel2=document.getElementById('n-tel').value.trim();const ptuhr='';const ns={id:"s"+Date.now(),vorname:vn,nachname:nn,spitz:sp,geschlecht:AppState.geschlecht||'m',tel:tel2,farbe:AppState.selFarbe||"blue",klasse:kl,beginn:bg,prufort:pf,prueftermin:pt,pruefzeit:ptuhr,theorie:th,sonder:[false,false,false],notiz:"",fahrstunden:[],pruefungen:[],gfa:{laengs:0,rechts:0,umkehr:0,rueckwaerts:0,stopp_mit:0,stopp_ohne:0,stadtautobahn:0,strassenbahn:0,gefahrenbremsung:0,mehrspurig:0},foto:null};
     schueler.push(ns);
@@ -2069,17 +2069,17 @@ function renderTerminDetail(date,idx){
       ${s.klasse==='B197'?schaltCardHTML(e.sid,date,'tag|'+date+'|'+idx):''}
 
       <!-- GFA & Notizen als Buttons -->
-      <button class="btn-full" style="margin-top:4px;display:flex;align-items:center;justify-content:space-between;padding:16px" onclick="renderSchuelerGFA('${e.sid}')">
+      <button class="btn-full" style="margin-top:4px;display:flex;align-items:center;justify-content:space-between;padding:16px" onclick="renderSchuelerGFA('${e.sid}','${date}')">
         <span style="display:flex;align-items:center;gap:10px;font-size:18px"><i class="ti ti-steering-wheel" style="font-size:22px;color:var(--accent)"></i>Grundfahraufgaben</span>
         <span style="display:flex;align-items:center;gap:8px;color:var(--tx3);font-size:16px">${gfaCount}/${GRUNDFAHRAUFGABEN.length}<i class="ti ti-chevron-right" style="font-size:20px"></i></span>
       </button>
-      <button class="btn-full" style="margin-top:8px;display:flex;align-items:center;justify-content:space-between;padding:16px" onclick="toggleNotizBadge('${e.sid}')">
+      <button class="btn-full" style="margin-top:8px;display:flex;align-items:center;justify-content:space-between;padding:16px" onclick="toggleNotizBadge('${e.sid}','${date}')">
         <span style="display:flex;align-items:center;gap:10px;font-size:18px"><i class="ti ti-note" style="font-size:22px;color:var(--accent)"></i>Notizen</span>
         <span style="display:flex;align-items:center;gap:8px;color:var(--tx3);font-size:16px">${notizText.trim()?'<i class="ti ti-point-filled" style="color:var(--accent)"></i>':''}<i class="ti ti-chevron-right" style="font-size:20px"></i></span>
       </button>
 
       <!-- Schülerkarte -->
-      <button class="btn-full" style="margin-top:12px" onclick="renderDashSchueler('${e.sid}')"><i class="ti ti-user"></i> Zur Schülerkarte</button>
+      <button class="btn-full" style="margin-top:12px" onclick="renderDashSchueler('${e.sid}','${date}')"><i class="ti ti-user"></i> Zur Schülerkarte</button>
       <button class="btn-full danger" style="margin-top:6px" onclick="_confirmDelTagTermin('${date}',${idx})"><i class="ti ti-trash"></i> Termin löschen</button>
 
     </div>
@@ -2256,7 +2256,7 @@ function syncKalenderToFahrstunden(){
     s.fahrstunden.sort((a,b)=>b.datum.localeCompare(a.datum)||(b.uhr||"").localeCompare(a.uhr||""));
   });
 }
-function renderDashSchueler(sid){
+function renderDashSchueler(sid,returnDate){
   const s=getS(sid);if(!s)return;
   const td=todayStr();
   const pruef=s.pruefungen||[];
@@ -2285,9 +2285,9 @@ function renderDashSchueler(sid){
 
   let html=`<div class="screen active">
     <div class="topbar">
-      <button class="btn-icon" onclick="renderSchuelerListe()"><i class="ti ti-arrow-left"></i></button>
+      <button class="btn-icon" onclick="${returnDate?`renderDashboard(0,'${returnDate}')`:"renderSchuelerListe()"}"><i class="ti ti-arrow-left"></i></button>
       <span class="topbar-title">${s.vorname} ${s.nachname}</span>
-      <button class="btn-icon" onclick="renderNeuSchueler('${sid}')"><i class="ti ti-pencil"></i></button>
+      <button class="btn-icon" onclick="renderNeuSchueler('${sid}','${returnDate||""}')"><i class="ti ti-pencil"></i></button>
     </div>
     <div class="scroll">
 
@@ -2339,14 +2339,18 @@ function renderDashSchueler(sid){
       ${s.klasse==='B197'?schaltCardHTML(sid,td,'dash'):''}
 
       <!-- GFA & Notizen als Buttons -->
-      <button class="btn-full" style="margin-top:4px;display:flex;align-items:center;justify-content:space-between;padding:16px" onclick="renderSchuelerGFA('${sid}')">
-        <span style="display:flex;align-items:center;gap:10px;font-size:18px"><i class="ti ti-steering-wheel" style="font-size:22px;color:var(--accent)"></i>Grundfahraufgaben</span>
-        <span style="display:flex;align-items:center;gap:8px;color:var(--tx3);font-size:16px">${GRUNDFAHRAUFGABEN.filter(g=>((s.gfa||{})[g.key]||0)>0).length}/${GRUNDFAHRAUFGABEN.length}<i class="ti ti-chevron-right" style="font-size:20px"></i></span>
-      </button>
-      <button class="btn-full" style="margin-top:8px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;padding:16px" onclick="toggleNotizBadge('${sid}')">
-        <span style="display:flex;align-items:center;gap:10px;font-size:18px"><i class="ti ti-note" style="font-size:22px;color:var(--accent)"></i>Notizen</span>
-        <span style="display:flex;align-items:center;gap:8px;color:var(--tx3);font-size:16px">${(s.notizen&&s.notizen.length)?'<i class="ti ti-point-filled" style="color:var(--accent)"></i>':''}<i class="ti ti-chevron-right" style="font-size:20px"></i></span>
-      </button>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px;margin-bottom:12px">
+        <button class="btn-full" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;text-align:center" onclick="renderSchuelerGFA('${sid}','${returnDate||""}')">
+          <i class="ti ti-steering-wheel" style="font-size:24px;color:var(--accent)"></i>
+          <span style="font-size:15px">Grundfahraufgaben</span>
+          <span style="display:flex;align-items:center;gap:4px;color:var(--tx3);font-size:14px">${GRUNDFAHRAUFGABEN.filter(g=>((s.gfa||{})[g.key]||0)>0).length}/${GRUNDFAHRAUFGABEN.length}</span>
+        </button>
+        <button class="btn-full" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;text-align:center" onclick="toggleNotizBadge('${sid}','${returnDate||""}')">
+          <i class="ti ti-note" style="font-size:24px;color:var(--accent)"></i>
+          <span style="font-size:15px">Notizen</span>
+          <span style="display:flex;align-items:center;gap:4px;color:var(--tx3);font-size:14px">${(s.notizen&&s.notizen.length)?'<i class="ti ti-point-filled" style="color:var(--accent)"></i>':'\u00a0'}</span>
+        </button>
+      </div>
 
       <!-- Nächster Termin -->
       ${naechsterTermin?`<div class="card" style="margin-bottom:12px;cursor:pointer" onclick="selDate='${naechsterTermin.datum}';renderTagAnsicht('${naechsterTermin.datum}')">
@@ -2444,12 +2448,12 @@ function setPruefErgebnis(sid,datum,bestanden){
   renderDashSchueler(sid);
 }
 
-function toggleNotizBadge(sid){
+function toggleNotizBadge(sid,returnDate){
   const s=getS(sid);if(!s)return;
   const text=(s.notizen&&s.notizen.length)?s.notizen.map(n=>n.text).join('\n'):'';
   const html=`<div class="screen active">
     <div class="topbar">
-      <button class="btn-icon" onclick="renderDashSchueler('${sid}')"><i class="ti ti-arrow-left"></i></button>
+      <button class="btn-icon" onclick="renderDashSchueler('${sid}','${returnDate||""}')"><i class="ti ti-arrow-left"></i></button>
       <span class="topbar-title"><i class="ti ti-notes" style="margin-right:6px"></i>Notizen · ${s.vorname}</span>
     </div>
     <div class="scroll" style="padding:16px">
@@ -2472,14 +2476,14 @@ function _gfaTile(sid,g,cnt){
       <div class="gfa-count" id="gfa-${sid}-${g.key}-d" style="font-size:26px;font-weight:700;color:${cnt>0?'var(--accent)':'var(--tx)'};margin-top:4px">${cnt}</div>
     </div>`;
 }
-function renderSchuelerGFA(sid){
+function renderSchuelerGFA(sid,returnDate){
   const s=getS(sid);if(!s)return;
   const gfaCount=GRUNDFAHRAUFGABEN.filter(g=>((s.gfa||{})[g.key]||0)>0).length;
   const tiles=GRUNDFAHRAUFGABEN.map(g=>_gfaTile(s.id,g,(s.gfa||{})[g.key]||0)).join('');
   const weitereTiles=WEITERE_UEBUNGSPUNKTE.map(g=>_gfaTile(s.id,g,(s.gfa||{})[g.key]||0)).join('');
   const html=`<div class="screen active">
     <div class="topbar">
-      <button class="btn-icon" onclick="renderDashSchueler('${sid}')"><i class="ti ti-arrow-left"></i></button>
+      <button class="btn-icon" onclick="renderDashSchueler('${sid}','${returnDate||""}')"><i class="ti ti-arrow-left"></i></button>
       <span class="topbar-title"><i class="ti ti-steering-wheel" style="margin-right:6px"></i>Grundfahraufgaben · ${s.vorname}</span>
     </div>
     <div class="scroll">
@@ -2487,7 +2491,7 @@ function renderSchuelerGFA(sid){
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${tiles}</div>
       <div style="font-size:14px;color:var(--tx3);margin:18px 0 8px;text-transform:uppercase;letter-spacing:.04em;font-weight:600">Weitere Übungspunkte</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${weitereTiles}</div>
-      <button class="btn-full" style="margin-top:14px" onclick="renderDashSchueler('${sid}')"><i class="ti ti-arrow-left"></i> Zurück</button>
+      <button class="btn-full" style="margin-top:14px" onclick="renderDashSchueler('${sid}','${returnDate||""}')"><i class="ti ti-arrow-left"></i> Zurück</button>
     </div>
   </div>`;
   renderApp(html);
