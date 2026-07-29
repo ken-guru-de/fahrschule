@@ -669,7 +669,7 @@ function renderDashboard(dashDateOffset=0,fixedDate=null){
           ontouchend="_lpEnd()"
           ontouchmove="_lpEnd()">
           ${s.foto?`<div class="avatar" style="overflow:hidden;flex-shrink:0"><img src="${s.foto}" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/></div>`:`<div class="avatar av-${s.farbe}">${initials(s)}</div>`}
-          <div class="item-info"><div class="item-name" style="color:${fieldTxtT||"var(--tx)"}"><div class="item-name-first">${s.vorname}${nick}</div><div class="item-name-last" style="color:${fieldTxt2T||"var(--tx2)"}">${s.nachname}</div></div><div class="item-sub" style="color:${fieldTxt2T||"var(--tx2)"}">${t.uhr}–${endZeit}Uhr · ${t.min} min${isPruefT?(()=>{const _mp=(s.pruefungen||[]).find(p=>p.datum===anzeigeDatum);const _po=(_mp&&_mp.prufort)||s.prufort;return _po?" · "+_po:"";})():""}${(t.notiz&&t.notiz.trim().toLowerCase()!=="prüfung")?" · "+t.notiz:""}</div></div>
+          <div class="item-info"><div class="item-name" style="color:${fieldTxtT||"var(--tx)"}"><div class="item-name-first">${s.vorname}${nick}</div><div class="item-name-last" style="color:${fieldTxt2T||"var(--tx2)"}">${s.nachname}</div></div><div class="item-sub" style="color:${fieldTxt2T||"var(--tx2)"}">${t.uhr}–${endZeit}Uhr · ${t.min} min${isPruefT?(()=>{const _mp=(s.pruefungen||[]).find(p=>p.datum===anzeigeDatum);const _po=(_mp&&_mp.prufort)||s.prufort;const _ab=_mp&&_mp.abfahrt;return(_po?" · "+_po:"")+(_ab?" · ab "+_ab:"");})():""}${(t.notiz&&t.notiz.trim().toLowerCase()!=="prüfung")?" · "+t.notiz:""}</div></div>
           ${isPruefT?`<span class="badge" style="background:#E24B4A;color:white">Prüfung</span>`:`<span class="badge badge-${s.klasse}">${s.klasse}</span>`}
           <i class="ti ti-chevron-right" style="color:${fieldTxt2T||"var(--tx3)"};font-size:18px"></i>
         </div>
@@ -985,6 +985,10 @@ function renderNeuSchueler(fromSid,returnDate){
               <select onchange="setPruefortInline('${s.id}',${pi},this.value)" style="flex:1;border:.5px solid var(--br2);border-radius:6px;background:var(--bg2);font-size:15px;color:var(--tx);padding:5px 6px">
                 ${PRUFORTE.map(o=>`<option value="${o}" ${(p.prufort||s.prufort)===o?"selected":""}>${o}</option>`).join("")}
               </select>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;margin-top:6px">
+              <i class="ti ti-map-pin-share" style="font-size:16px;color:var(--tx3)"></i>
+              <input type="text" placeholder="Abfahrtort (optional, z.B. Treffpunkt)" value="${p.abfahrt||''}" onchange="setPruefAbfahrtInline('${s.id}',${pi},this.value)" style="flex:1;border:.5px solid var(--br2);border-radius:6px;background:var(--bg2);font-size:15px;color:var(--tx);padding:5px 6px"/>
             </div>
           </div>`).join('')}
         </div>`:''}
@@ -2326,7 +2330,7 @@ function renderDashSchueler(sid,returnDate){
         <div style="flex:1">
           <div style="font-size:20px;font-weight:700">${s.vorname} ${s.nachname}${s.spitz?` <span style="font-size:15px;color:var(--tx3);font-weight:400">«${s.spitz}»</span>`:''}</div>
           <div style="font-size:15px;color:var(--tx2);margin-top:2px">Klasse ${s.klasse} · Beginn ${fmtDate(s.beginn).day}. ${fmtDate(s.beginn).mon} ${fmtDate(s.beginn).year}</div>
-          <div style="font-size:15px;color:var(--tx2)">${(()=>{const _offen=(s.pruefungen||[]).find(p=>p.bestanden===null||p.bestanden===undefined);const _last=(s.pruefungen||[]).slice().sort((a,b)=>b.datum.localeCompare(a.datum))[0];const _po=(_offen&&_offen.prufort)||(_last&&_last.prufort)||s.prufort||'';return _po;})()}</div>
+          <div style="font-size:15px;color:var(--tx2)">${(()=>{const _offen=(s.pruefungen||[]).find(p=>p.bestanden===null||p.bestanden===undefined);const _last=(s.pruefungen||[]).slice().sort((a,b)=>b.datum.localeCompare(a.datum))[0];const _rel=_offen||_last;const _po=(_rel&&_rel.prufort)||s.prufort||'';const _ab=_rel&&_rel.abfahrt;return _po+(_ab?' · ab '+_ab:'');})()}</div>
         </div>
       </div>
 
@@ -2425,6 +2429,11 @@ function setPruefErgebnisInline(sid,pi,val){
 function setPruefortInline(sid,pi,val){
   const s=getS(sid);if(!s||!s.pruefungen||!s.pruefungen[pi])return;
   s.pruefungen[pi].prufort=val;
+  saveAll();
+}
+function setPruefAbfahrtInline(sid,pi,val){
+  const s=getS(sid);if(!s||!s.pruefungen||!s.pruefungen[pi])return;
+  s.pruefungen[pi].abfahrt=val.trim();
   saveAll();
 }
 
