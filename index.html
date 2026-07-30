@@ -1484,7 +1484,7 @@ function setKPers(typ){
 function saveKalTermin(date){
   try{
   const uhr=document.getElementById("k-uhr")?document.getElementById("k-uhr").value:"";
-  if(!uhr)return;
+  if(!uhr){showToast("toast-kal","Bitte Startzeit eingeben");return;}
   const persMode=AppState.kal.pers||"schueler";
   const isAuffrisch=persMode==="auffrisch";
   const isTheorie=persMode==="theorie";
@@ -1503,6 +1503,7 @@ function saveKalTermin(date){
     if(!sid){
       const el=document.getElementById("k-sid");
       if(el){el.classList.add("err-border");setTimeout(()=>el.classList.remove("err-border"),1500);}
+      showToast("toast-kal","Bitte Schüler auswählen");
       return;
     }
   } else {
@@ -1510,6 +1511,7 @@ function saveKalTermin(date){
     const name=nameEl?nameEl.value.trim():"";
     if(!name){
       if(nameEl){nameEl.classList.add("err-border");setTimeout(()=>nameEl.classList.remove("err-border"),1500);}
+      showToast("toast-kal","Bitte Namen eingeben");
       return;
     }
     sid="__auffrisch__:"+name;
