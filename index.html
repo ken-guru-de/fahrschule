@@ -445,7 +445,7 @@ function renderCommPanel(phone){
 function saveAll(){
   const ids=new Set(schueler.map(s=>s.id));
   Object.keys(termine).forEach(d=>{
-    termine[d]=termine[d].filter(t=>t.sid&&(ids.has(t.sid)||t.sid.startsWith("__auffrisch__")));
+    termine[d]=termine[d].filter(t=>t.sid&&(ids.has(t.sid)||t.sid.startsWith("__auffrisch__")||t.sid.startsWith("__theorie__")));
     if(!termine[d].length)delete termine[d];
   });
   save("fs_schueler",schueler);
