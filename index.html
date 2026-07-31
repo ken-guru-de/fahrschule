@@ -340,7 +340,7 @@ const IS_IPAD=false;
   let sx=0, sy=0, locked=null, skip=false;
   document.addEventListener("touchstart",function(e){
     if(e.touches.length!==1){skip=true;return;}
-    skip=!!(e.target.closest(".swipe-item")||e.target.closest("#foto-edit-img"));
+    skip=!!(e.target.closest(".swipe-item")||e.target.closest("#foto-edit-img")||e.target.closest(".woche-scroll"));
     sx=e.touches[0].clientX;sy=e.touches[0].clientY;locked=null;
   },{passive:true});
   document.addEventListener("touchmove",function(e){
