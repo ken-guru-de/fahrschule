@@ -198,6 +198,10 @@ button{box-shadow:var(--shadow-sm);}
 .wchip-w{background:#F2F2F2;}
 .wchip-w .wc-time{color:#222;}
 .wchip-w .wc-name{color:rgba(0,0,0,.72);}
+.wchip-y{background:#E8B923;}
+.wchip-y .wc-time{color:#141414;}
+.wchip-y .wc-name{color:rgba(20,20,20,.75);}
+.wchip-k{background:#1A1A1A;}
 .termin-item{background:var(--bg);border:.5px solid var(--br);border-radius:var(--r-lg);padding:9px 12px;display:flex;align-items:center;gap:10px;}
 .t-avatar{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0;}
 .t-info{flex:1;}
@@ -1339,7 +1343,9 @@ function renderWochenAnsicht(anker){
         let cls="wchip-g";
         if(isTheorie)cls="wchip-w";
         else if(e.typ==="pruef")cls="wchip-r";
-        else if(e.typ==="ueberland"||e.typ==="autobahn"||e.typ==="nacht")cls="wchip-b";
+        else if(e.typ==="ueberland")cls="wchip-y";
+        else if(e.typ==="nacht")cls="wchip-k";
+        else if(e.typ==="autobahn")cls="wchip-b";
         const tapAction=(isTheorie||isAuffrisch)?`renderTagAnsicht('${key}')`:`renderTerminDetail('${key}',${idx})`;
         html+=`<div class="woche-chip ${cls}" onclick="${tapAction}">
           <div class="wc-time">${e.uhr} · ${e.min} min</div>
