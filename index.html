@@ -183,6 +183,17 @@ button{box-shadow:var(--shadow-sm);}
 .cdot{width:6px;height:6px;border-radius:50%;}
 .cdot-r{background:#E24B4A;}.cdot-g{background:#639922;}.cdot-b{background:#378ADD;}
 .spacer-day{min-height:58px;}
+.woche-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;padding:8px 8px 16px;}
+.woche-day{display:flex;flex-direction:column;gap:5px;}
+.woche-day-header{text-align:center;font-size:14.5px;font-weight:700;color:var(--tx2);line-height:1.3;padding:6px 2px;border-radius:var(--r-md);background:var(--bg2);}
+.woche-day-header.today{background:var(--accent);color:white;}
+.woche-empty{text-align:center;font-size:13px;color:var(--tx3);padding:10px 0;}
+.woche-chip{border-radius:10px;padding:6px 6px;cursor:pointer;box-shadow:var(--shadow-sm);}
+.woche-chip .wc-time{font-size:13px;font-weight:700;color:white;line-height:1.2;}
+.woche-chip .wc-name{font-size:13.5px;font-weight:600;color:rgba(255,255,255,.92);line-height:1.25;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.wchip-g{background:#3B8C5A;}
+.wchip-r{background:#E24B4A;}
+.wchip-b{background:#378ADD;}
 .termin-item{background:var(--bg);border:.5px solid var(--br);border-radius:var(--r-lg);padding:9px 12px;display:flex;align-items:center;gap:10px;}
 .t-avatar{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0;}
 .t-info{flex:1;}
@@ -1210,6 +1221,7 @@ function buildKalender(){
     <div class="topbar">
       <button class="btn-icon" onclick="renderDashboard()"><i class="ti ti-arrow-left"></i></button>
       <span class="topbar-title">Kalender</span>
+      <button class="btn-icon" onclick="renderWochenAnsicht()"><i class="ti ti-calendar-week"></i></button>
     </div>
     <div class="month-nav">
       <button class="btn-icon dark" onclick="prevMonth()"><i class="ti ti-chevron-left"></i></button>
@@ -1269,6 +1281,78 @@ function renderCalGrid(){
     el.setAttribute("onclick",`selDate='${key}';renderTagAnsicht('${key}')`);
     grid.appendChild(el);
   }
+}
+let wochenAnker=null;
+function renderWochenAnsicht(anker){
+  if(!anker)anker=wochenAnker||selDate||todayStr();
+  wochenAnker=anker;
+  const td=todayStr();
+  const d=new Date(anker);
+  const dow=d.getDay();
+  const diffToMon=dow===0?-6:(1-dow);
+  const mon=new Date(d);mon.setDate(d.getDate()+diffToMon);
+  const days=[];
+  for(let i=0;i<5;i++){const dd=new Date(mon);dd.setDate(mon.getDate()+i);days.push(toKey(dd.getFullYear(),dd.getMonth()+1,dd.getDate()));}
+  const fdA=fmtDate(days[0]),fdB=fmtDate(days[4]);
+  const weekLabel=fdA.mon===fdB.mon?`${fdA.day}.–${fdB.day}. ${fdB.mon} ${fdB.year}`:`${fdA.day}. ${fdA.mon} – ${fdB.day}. ${fdB.mon} ${fdB.year}`;
+  const zeigeHeuteBtn=!days.includes(td);
+
+  let html=`<div class="screen active" id="scr-woche">
+    <div class="topbar">
+      <button class="btn-icon" onclick="renderDashboard()"><i class="ti ti-arrow-left"></i></button>
+      <span class="topbar-title">Woche</span>
+      <button class="btn-icon" onclick="buildKalender()"><i class="ti ti-calendar-month"></i></button>
+    </div>
+    <div class="month-nav">
+      <button class="btn-icon dark" onclick="_wocheNav(-7)"><i class="ti ti-chevron-left"></i></button>
+      <span class="month-label" style="color:var(--tx);text-align:center;font-size:17px">${weekLabel}</span>
+      <button class="btn-icon dark" onclick="_wocheNav(7)"><i class="ti ti-chevron-right"></i></button>
+    </div>
+    ${zeigeHeuteBtn?`<div style="text-align:center;padding:8px 0 0"><button onclick="renderWochenAnsicht('${td}')" style="background:none;border:1px solid var(--accent);border-radius:8px;color:var(--accent);font-size:13px;padding:3px 12px;font-family:inherit">Diese Woche</button></div>`:""}
+    <div class="cal-scroll"><div class="woche-grid">`;
+
+  days.forEach(key=>{
+    const fd=fmtDate(key);
+    const wt=wochentagKurz(key);
+    const isToday=key===td;
+    const roh=termine[key]||[];
+    const items=roh.map((e,idx)=>({e,idx})).sort((a,b)=>a.e.uhr.localeCompare(b.e.uhr));
+    html+=`<div class="woche-day">
+      <div class="woche-day-header${isToday?" today":""}">${wt}<br>${fd.day}.</div>`;
+    if(!items.length){
+      html+=`<div class="woche-empty">–</div>`;
+    }else{
+      items.forEach(({e,idx})=>{
+        const isTheorie=e.typ==="theorie"||(e.sid&&e.sid.startsWith("__theorie__"));
+        const isAuffrisch=e.sid&&e.sid.startsWith("__auffrisch__");
+        let name;
+        if(isTheorie){name=(e.sid&&e.sid.indexOf(":")>=0)?e.sid.split(":").slice(1).join(":"):"Theorie";}
+        else if(isAuffrisch){name=e.sid.replace("__auffrisch__:","");}
+        else{
+          const s=getS(e.sid);if(!s)return;
+          name=s.spitz||s.vorname;
+        }
+        let cls="wchip-g";
+        if(e.typ==="pruef")cls="wchip-r";
+        else if(e.typ==="ueberland"||e.typ==="autobahn"||e.typ==="nacht")cls="wchip-b";
+        const tapAction=(isTheorie||isAuffrisch)?`renderTagAnsicht('${key}')`:`renderTerminDetail('${key}',${idx})`;
+        html+=`<div class="woche-chip ${cls}" onclick="${tapAction}">
+          <div class="wc-time">${e.uhr}</div>
+          <div class="wc-name">${name}</div>
+        </div>`;
+      });
+    }
+    html+=`</div>`;
+  });
+
+  html+=`</div></div></div>`;
+  renderApp(html);
+  setTimeout(initPTR,50);
+}
+function _wocheNav(dir){
+  const d=new Date(wochenAnker||selDate||todayStr());
+  d.setDate(d.getDate()+dir);
+  renderWochenAnsicht(toKey(d.getFullYear(),d.getMonth()+1,d.getDate()));
 }
 function renderCalDetail(){
   const el=document.getElementById("cal-detail");if(!el)return;
