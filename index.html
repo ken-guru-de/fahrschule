@@ -183,8 +183,9 @@ button{box-shadow:var(--shadow-sm);}
 .cdot{width:6px;height:6px;border-radius:50%;}
 .cdot-r{background:#E24B4A;}.cdot-g{background:#639922;}.cdot-b{background:#378ADD;}
 .spacer-day{min-height:58px;}
-.woche-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;padding:8px 8px 16px;}
-.woche-day{display:flex;flex-direction:column;gap:5px;}
+.woche-scroll{flex:1;overflow-x:auto;overflow-y:auto;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity;}
+.woche-grid{display:grid;grid-template-columns:repeat(5,minmax(148px,1fr));gap:6px;padding:8px 8px 16px;}
+.woche-day{display:flex;flex-direction:column;gap:5px;scroll-snap-align:start;}
 .woche-day-header{text-align:center;font-size:14.5px;font-weight:700;color:var(--tx2);line-height:1.3;padding:6px 2px;border-radius:var(--r-md);background:var(--bg2);}
 .woche-day-header.today{background:var(--accent);color:white;}
 .woche-empty{text-align:center;font-size:13px;color:var(--tx3);padding:10px 0;}
@@ -1309,7 +1310,7 @@ function renderWochenAnsicht(anker){
       <button class="btn-icon dark" onclick="_wocheNav(7)"><i class="ti ti-chevron-right"></i></button>
     </div>
     ${zeigeHeuteBtn?`<div style="text-align:center;padding:8px 0 0"><button onclick="renderWochenAnsicht('${td}')" style="background:none;border:1px solid var(--accent);border-radius:8px;color:var(--accent);font-size:13px;padding:3px 12px;font-family:inherit">Diese Woche</button></div>`:""}
-    <div class="cal-scroll"><div class="woche-grid">`;
+    <div class="woche-scroll"><div class="woche-grid">`;
 
   days.forEach(key=>{
     const fd=fmtDate(key);
