@@ -980,12 +980,12 @@ function renderNeuSchueler(fromSid,returnDate){
         <div class="card-row"><span class="card-label"><i class="ti ti-license"></i>Klasse</span>
           <select id="n-kl">${KLASSEN.map(k=>`<option value="${k}" ${s&&s.klasse===k?"selected":""}>${k}</option>`).join("")}</select>
         </div>
-        ${!s?`<div class="card-row"><span class="card-label"><i class="ti ti-map-pin"></i>Prüfort</span>
+        <div class="card-row"><span class="card-label"><i class="ti ti-map-pin"></i>Prüfort</span>
           <select id="n-pf">
             <option value="">Auswählen…</option>
-            ${PRUFORTE.map(p=>`<option value="${p}">${p}</option>`).join("")}
+            ${PRUFORTE.map(p=>`<option value="${p}" ${s&&s.prufort===p?"selected":""}>${p}</option>`).join("")}
           </select>
-        </div>`:''}
+        </div>
 
         ${s&&s.pruefungen&&s.pruefungen.length?`
         <div style="padding:8px 14px;border-top:.5px solid var(--br)">
@@ -3001,6 +3001,11 @@ function exportMonatPDF(monatStr){
 }
 
 (async()=>{
+  try{
+    // Persistenten Speicher anfragen, damit iOS/Safari die Daten (u.a. Telefon-/WA-Nummern)
+    // nicht bei Speicherplatzmangel automatisch löscht.
+    if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{});
+  }catch(e){}
   try{
     // Korrektur 1: Versuchsnummern chronologisch neu vergeben
     schueler.forEach(s=>{
