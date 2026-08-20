@@ -106,6 +106,8 @@ button{box-shadow:var(--shadow-sm);}
 .badge-BA{background:#e85510;color:white;}
 .badge-B197{background:#c44000;color:white;}
 .badge-B17{background:#27500A;color:white;}
+.badge-umschreiber{background:rgba(59,130,246,0.16);color:#1D4ED8;border:1px solid rgba(59,130,246,0.35);font-size:12.5px;font-weight:700;padding:3px 9px;border-radius:20px;flex-shrink:0;letter-spacing:.02em;display:inline-flex;align-items:center;gap:4px;}
+@media(prefers-color-scheme:dark){.badge-umschreiber{background:rgba(96,165,250,0.18);color:#93C5FD;border-color:rgba(96,165,250,0.4);}}
 .status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
 .dot-blue{background:var(--accent);}
 .search-wrap{position:relative;}
@@ -802,7 +804,10 @@ function _schuelerCardHTML(s,heuteIds,sortMode){
         <div class="item-sub">${subLine}</div>
         <div style="font-size:14px;color:var(--tx3);margin-top:2px;white-space:nowrap">${gefahren} gefahren · ${offen} geplant</div>
       </div>
-      <span class="badge badge-${s.klasse}">${s.klasse}</span>
+      <span style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+        <span class="badge badge-${s.klasse}">${s.klasse}</span>
+        ${s.umschreiber?`<span class="badge-umschreiber" style="padding:2px 7px;font-size:11px" title="Umschreiber">U</span>`:''}
+      </span>
       <span class="status-dot" style="background:${dotColor}"></span>
     </div>
   </div>`;
@@ -980,6 +985,15 @@ function renderNeuSchueler(fromSid,returnDate){
         <div class="card-row"><span class="card-label"><i class="ti ti-license"></i>Klasse</span>
           <select id="n-kl">${KLASSEN.map(k=>`<option value="${k}" ${s&&s.klasse===k?"selected":""}>${k}</option>`).join("")}</select>
         </div>
+        <div class="card-row"><span class="card-label"><i class="ti ti-replace"></i>Umschreiber</span>
+          <div style="flex:1;display:flex;justify-content:flex-end">
+            <label class="toggle-wrap">
+              <input type="checkbox" id="n-um" ${s&&s.umschreiber?"checked":""}/>
+              <div class="toggle-track"></div>
+              <div class="toggle-thumb"></div>
+            </label>
+          </div>
+        </div>
         <div class="card-row"><span class="card-label"><i class="ti ti-map-pin"></i>Prüfort</span>
           <select id="n-pf">
             <option value="">Auswählen…</option>
@@ -1062,12 +1076,14 @@ function saveSchueler(editSid,returnDate){
   const pt='';
   const thEl=document.getElementById("n-th");
   const th=thEl?thEl.checked:(editSid?getS(editSid).theorie:false);
+  const umEl=document.getElementById("n-um");
+  const um=umEl?umEl.checked:(editSid?getS(editSid).umschreiber:false);
   const sp=document.getElementById("n-sp").value.trim();
   const bgEl=document.getElementById("n-bg");
   const bg=bgEl&&bgEl.value?bgEl.value:(editSid?getS(editSid).beginn:todayStr());
   if(editSid){
     const s=getS(editSid);
-    s.vorname=vn;s.nachname=nn;s.spitz=sp;s.geschlecht=AppState.geschlecht||'m';s.tel=document.getElementById('n-tel').value.trim();s.beginn=bg;s.klasse=kl;s.prufort=pf;s.prueftermin=pt;s.theorie=th;s.farbe=AppState.selFarbe;
+    s.vorname=vn;s.nachname=nn;s.spitz=sp;s.geschlecht=AppState.geschlecht||'m';s.tel=document.getElementById('n-tel').value.trim();s.beginn=bg;s.klasse=kl;s.prufort=pf;s.prueftermin=pt;s.theorie=th;s.umschreiber=um;s.farbe=AppState.selFarbe;
     // Prüfungsergebnisse aus Edit-Dialog speichern
     const peRows=document.getElementById('pe-rows');
     if(peRows){
@@ -1094,7 +1110,7 @@ function saveSchueler(editSid,returnDate){
     }
     saveAll();syncFahrstundenToKalender();renderDashSchueler(editSid,returnDate);
   }else{
-    const tel2=document.getElementById('n-tel').value.trim();const ptuhr='';const ns={id:"s"+Date.now(),vorname:vn,nachname:nn,spitz:sp,geschlecht:AppState.geschlecht||'m',tel:tel2,farbe:AppState.selFarbe||"blue",klasse:kl,beginn:bg,prufort:pf,prueftermin:pt,pruefzeit:ptuhr,theorie:th,sonder:[false,false,false],notiz:"",fahrstunden:[],pruefungen:[],gfa:{laengs:0,rechts:0,umkehr:0,rueckwaerts:0,stopp_mit:0,stopp_ohne:0,stadtautobahn:0,strassenbahn:0,gefahrenbremsung:0,mehrspurig_links:0,mehrspurig_rechts:0,zone30:0,vorfahrt:0},foto:null};
+    const tel2=document.getElementById('n-tel').value.trim();const ptuhr='';const ns={id:"s"+Date.now(),vorname:vn,nachname:nn,spitz:sp,geschlecht:AppState.geschlecht||'m',tel:tel2,farbe:AppState.selFarbe||"blue",klasse:kl,beginn:bg,prufort:pf,prueftermin:pt,pruefzeit:ptuhr,theorie:th,umschreiber:um,sonder:[false,false,false],notiz:"",fahrstunden:[],pruefungen:[],gfa:{laengs:0,rechts:0,umkehr:0,rueckwaerts:0,stopp_mit:0,stopp_ohne:0,stadtautobahn:0,strassenbahn:0,gefahrenbremsung:0,mehrspurig_links:0,mehrspurig_rechts:0,zone30:0,vorfahrt:0},foto:null};
     schueler.push(ns);
     saveAll();
     syncKalenderToFahrstunden();
@@ -2428,7 +2444,7 @@ function renderDashSchueler(sid,returnDate){
         </div>
         <input type="file" id="foto-input-${sid}" accept="image/*" style="display:none" onchange="saveFoto('${sid}',this)"/>
         <div style="flex:1">
-          <div style="font-size:20px;font-weight:700">${s.vorname} ${s.nachname}${s.spitz?` <span style="font-size:15px;color:var(--tx3);font-weight:400">«${s.spitz}»</span>`:''}</div>
+          <div style="font-size:20px;font-weight:700;display:flex;align-items:center;gap:8px;flex-wrap:wrap">${s.vorname} ${s.nachname}${s.spitz?` <span style="font-size:15px;color:var(--tx3);font-weight:400">«${s.spitz}»</span>`:''}${s.umschreiber?`<span class="badge-umschreiber"><i class="ti ti-replace" style="font-size:12px"></i>Umschreiber</span>`:''}</div>
           <div style="font-size:15px;color:var(--tx2);margin-top:2px">Klasse ${s.klasse} · Beginn ${fmtDate(s.beginn).day}. ${fmtDate(s.beginn).mon} ${fmtDate(s.beginn).year}</div>
           <div style="font-size:15px;color:var(--tx2)">${(()=>{const _offen=(s.pruefungen||[]).find(p=>p.bestanden===null||p.bestanden===undefined);const _last=(s.pruefungen||[]).slice().sort((a,b)=>b.datum.localeCompare(a.datum))[0];const _rel=_offen||_last;const _po=(_rel&&_rel.prufort)||s.prufort||'';const _ab=_rel&&_rel.abfahrt;return _po+(_ab?' · ab '+_ab:'');})()}</div>
         </div>
