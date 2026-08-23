@@ -63,7 +63,10 @@ button{box-shadow:var(--shadow-sm);}
 .card-row:last-child{border-bottom:none;}
 .card-label{font-size:17px;color:var(--tx2);display:flex;align-items:center;gap:6px;min-width:130px;flex-shrink:0;}
 .card-label i{font-size:17px;}
-.card-row input,.card-row select,.card-row textarea{flex:1;border:none;background:transparent;font-size:17px;color:var(--tx);font-family:inherit;outline:none;text-align:right;}
+.card-row input,.card-row select,.card-row textarea{flex:1;min-width:0;max-width:100%;border:none;background:transparent;font-size:17px;color:var(--tx);font-family:inherit;outline:none;text-align:right;}
+/* Ohne min-width:0 wird ein <select> so breit wie sein längster Eintrag (z.B. langer
+   Schülername) und schiebt den sichtbaren Text aus der Karte heraus nach rechts. */
+.card-row select{overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
 .card-row input[type=text],.card-row input[type=tel],.card-row input[type=search],.card-row textarea{text-align:left;}
 .card-row textarea{text-align:left;resize:none;}
 .card-row select option{background:var(--bg);}
@@ -371,6 +374,9 @@ const AppState={
   pn:{versuch:1,bestanden:null},
   selFarbe:"blue",
   geschlecht:"m",
+  // Merkt sich, welcher Tag im Dashboard/in der Tagesansicht gerade angezeigt wird,
+  // damit man nach dem Löschen eines Termins auf genau diesem Tag bleibt.
+  dash:{offset:0,fixed:null,shown:null},
 };
 
 // ── MODAL-SYSTEM ──────────────────────────────────────────────────────────────
@@ -584,6 +590,7 @@ function renderDashboard(dashDateOffset=0,fixedDate=null){
       anzeigeLabel=anzeigeDatum===td?"Heute":wochentagKurz(anzeigeDatum)+", "+fd2.day+". "+fd2.mon;
     }
   }
+  AppState.dash={offset:dashDateOffset,fixed:fixedDate,shown:anzeigeDatum};
   const anzeigeTermine=(termine[anzeigeDatum]||[]).sort((a,b)=>a.uhr.localeCompare(b.uhr));
   const anzeigeTotalMin=anzeigeTermine.reduce((a,t)=>a+(t.min||0),0);
   const _lblParts=anzeigeLabel.split(" · ");
@@ -2060,7 +2067,21 @@ function _confirmDelDashTermin(date,idx){
 function _doDelDashTermin(date,idx){
   closeModal();
   if(!_deleteTerminData(date,idx,true))return;
-  if(AppState.et.backSid)renderDashSchueler(AppState.et.backSid);else renderDashboard();
+  if(AppState.et.backSid){renderDashSchueler(AppState.et.backSid);return;}
+  // Auf dem angezeigten Tag bleiben statt auf "Heute" zu springen –
+  // so lassen sich mehrere Termine desselben Tages nacheinander löschen.
+  _rerenderTag(date);
+}
+// Rendert die Tages-/Dashboard-Ansicht neu und hält dabei den zuletzt
+// angezeigten Tag fest (Fallback: der Tag, aus dem gelöscht wurde).
+function _rerenderTag(date){
+  const d=AppState.dash||{};
+  const ziel=d.fixed||date||d.shown||todayStr();
+  if(ziel===todayStr()&&!d.fixed){renderDashboard(0);return;}
+  // Kalender-Kontext mitziehen, damit ein Wechsel in den Kalender den richtigen Monat zeigt
+  const p=ziel.split("-");
+  curYear=parseInt(p[0]);curMonth=parseInt(p[1]);selDate=ziel;
+  renderDashboard(0,ziel);
 }
 function showTagTerminActions(date,idx){
   const t=(termine[date]||[]);const e=t[idx];if(!e)return;
