@@ -511,6 +511,10 @@ function farbStyle(farbe){const f=FARBEN.find(x=>x.key===farbe)||FARBEN[0];retur
 
 // ── DASHBOARD ─────────────────────────────────────────────────────────────────
 function renderDashboard(dashDateOffset=0,fixedDate=null){
+  // "Zurück zur Schülerkarte"-Merker aufheben, sobald die Tages-/Heute-Ansicht
+  // gezeigt wird. Sonst bleibt er von einem früheren Besuch der Schülerkarte
+  // stehen und ein späteres Löschen in der Tagesansicht springt dorthin.
+  try{if(typeof AppState!=="undefined"&&AppState.et)AppState.et.backSid=null;}catch(e){}
   const td=todayStr();
   const heuteTermine=(termine[td]||[]).sort((a,b)=>a.uhr.localeCompare(b.uhr));
   const allePruef=[];
