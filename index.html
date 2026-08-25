@@ -186,7 +186,7 @@ button{box-shadow:var(--shadow-sm);}
 .cal-day.today .day-num{color:white;}
 .dot-row{display:flex;gap:2px;flex-wrap:wrap;justify-content:center;}
 .cdot{width:6px;height:6px;border-radius:50%;}
-.cdot-r{background:#E24B4A;}.cdot-g{background:#639922;}.cdot-b{background:#378ADD;}
+.cdot-r{background:#E24B4A;}.cdot-g{background:#4599DF;}.cdot-b{background:#14458C;}.cdot-x{background:#6E7480;}
 .spacer-day{min-height:58px;}
 .woche-scroll{flex:1;overflow-x:auto;overflow-y:auto;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity;touch-action:pan-x pan-y;}
 .woche-grid{display:grid;grid-template-columns:repeat(5,minmax(148px,1fr));gap:6px;padding:8px 8px 16px;}
@@ -198,9 +198,10 @@ button{box-shadow:var(--shadow-sm);}
 .woche-chip{border-radius:10px;padding:6px 6px;cursor:pointer;box-shadow:var(--shadow-sm);}
 .woche-chip .wc-time{font-size:13px;font-weight:700;color:white;line-height:1.2;}
 .woche-chip .wc-name{font-size:13.5px;font-weight:600;color:rgba(255,255,255,.92);line-height:1.25;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.wchip-g{background:#3B8C5A;}
+.wchip-g{background:#4599DF;}
 .wchip-r{background:#E24B4A;}
-.wchip-b{background:#378ADD;}
+.wchip-b{background:#14458C;}
+.wchip-x{background:#6E7480;}
 .wchip-w{background:#F2F2F2;}
 .wchip-w .wc-time{color:#222;}
 .wchip-w .wc-name{color:rgba(0,0,0,.72);}
@@ -687,9 +688,9 @@ function renderDashboard(dashDateOffset=0,fixedDate=null){
         :notizLcT.includes('überland')?'ueberland'
         :notizLcT.includes('autobahn')?'autobahn'
         :notizLcT.includes('nacht')?'nacht':'';
-      const fieldHexT=isPruefT?"#E24B4A":sonderTypT==='autobahn'?"#378ADD":sonderTypT==='ueberland'?"#E8B923":sonderTypT==='nacht'?"#1A1A1A":"#3B8C5A";
-      const fieldTxtT=fieldHexT?(sonderTypT==='ueberland'?"#141414":"#ffffff"):"";
-      const fieldTxt2T=fieldHexT?(sonderTypT==='ueberland'?"rgba(20,20,20,.75)":"rgba(255,255,255,.8)"):"";
+      const fieldHexT=t.abgesagt?"#6E7480":isPruefT?"#E24B4A":sonderTypT==='autobahn'?"#14458C":sonderTypT==='ueberland'?"#E8B923":sonderTypT==='nacht'?"#1A1A1A":"#4599DF";
+      const fieldTxtT=fieldHexT?((sonderTypT==='ueberland'&&!t.abgesagt)?"#141414":"#ffffff"):"";
+      const fieldTxt2T=fieldHexT?((sonderTypT==='ueberland'&&!t.abgesagt)?"rgba(20,20,20,.75)":"rgba(255,255,255,.8)"):"";
       const endZeit=(()=>{const [h,m]=t.uhr.split(":").map(Number);const tot=h*60+m+t.min;return String(Math.floor(tot/60)%24).padStart(2,"0")+":"+String(tot%60).padStart(2,"0");})();
       const realIdx=(termine[anzeigeDatum]||[]).findIndex((x,i)=>x===t||( x.sid===t.sid&&x.uhr===t.uhr&&x.min===t.min));
       const _elId=`swipe-dt-${anzeigeDatum}-${realIdx}`;
@@ -987,9 +988,6 @@ function renderNeuSchueler(fromSid,returnDate){
         <div class="card-row"><span class="card-label"><i class="ti ti-user"></i>Vorname</span><input type="text" id="n-vn" value="${s?s.vorname:""}" placeholder="Pflichtfeld"/></div>
         <div class="card-row"><span class="card-label"><i class="ti ti-user"></i>Nachname</span><input type="text" id="n-nn" value="${s?s.nachname:""}" placeholder="Pflichtfeld"/></div>
         <div class="card-row"><span class="card-label"><i class="ti ti-mood-smile"></i>Spitzname</span><input type="text" id="n-sp" value="${s?s.spitz:""}" placeholder="Optional"/></div>
-        <div class="card-row"><span class="card-label"><i class="ti ti-palette"></i>Farbe</span>
-          <div id="n-farbdots" style="flex:1;display:flex;justify-content:flex-end;gap:8px"></div>
-        </div>
 
       </div></div>
       <div><div class="sec-label">Ausbildung</div>
@@ -1049,7 +1047,6 @@ function renderNeuSchueler(fromSid,returnDate){
   renderApp(html);
   AppState.selFarbe=selFarbe;
   AppState.geschlecht=s?s.geschlecht||'m':'m';
-  renderFarbDots('n-farbdots');
   setTimeout(initPTR,50);
 }
 function changeKlasse(sid){
@@ -1310,7 +1307,8 @@ function renderCalGrid(){
       const dr=document.createElement("div");dr.className="dot-row";
       t.slice(0,6).forEach(e=>{
         let cls="cdot-g";
-        if(e.typ==="pruef")cls="cdot-r";
+        if(e.abgesagt)cls="cdot-x";
+        else if(e.typ==="pruef")cls="cdot-r";
         else if(e.typ==="ueberland"||e.typ==="autobahn"||e.typ==="nacht")cls="cdot-b";
         const dot=document.createElement("div");
         dot.className="cdot "+cls;
@@ -1373,18 +1371,12 @@ function renderWochenAnsicht(anker){
           name=s.spitz||s.vorname;
         }
         let cls="wchip-g";
-        if(isTheorie)cls="wchip-w";
+        if(e.abgesagt)cls="wchip-x";
+        else if(isTheorie)cls="wchip-w";
         else if(e.typ==="pruef")cls="wchip-r";
-        else{
-          const _notizLc=(e.notiz||"").toLowerCase();
-          const _sonderTyp=(e.typ==="ueberland"||e.typ==="autobahn"||e.typ==="nacht")?e.typ
-            :_notizLc.includes("überland")?"ueberland"
-            :_notizLc.includes("autobahn")?"autobahn"
-            :_notizLc.includes("nacht")?"nacht":"";
-          if(_sonderTyp==="ueberland")cls="wchip-y";
-          else if(_sonderTyp==="nacht")cls="wchip-k";
-          else if(_sonderTyp==="autobahn")cls="wchip-b";
-        }
+        else if(e.typ==="ueberland")cls="wchip-y";
+        else if(e.typ==="nacht")cls="wchip-k";
+        else if(e.typ==="autobahn")cls="wchip-b";
         const tapAction=(isTheorie||isAuffrisch)?`renderTagAnsicht('${key}')`:`renderTerminDetail('${key}',${idx})`;
         html+=`<div class="woche-chip ${cls}" onclick="${tapAction}">
           <div class="wc-time">${e.uhr} · ${e.min} min</div>
@@ -1866,6 +1858,15 @@ function renderEditKalTermin(date,idx){
             <button class="cir-btn" onclick="changeETMin(5);ektUpdateEnd()">+</button>
           </div>
         </div>
+        <div class="card-row"><span class="card-label"><i class="ti ti-calendar-x"></i>Kurzfristig abgesagt</span>
+          <div style="flex:1;display:flex;justify-content:flex-end">
+            <label class="toggle-wrap">
+              <input type="checkbox" id="ekt-abgesagt" ${t.abgesagt?"checked":""}/>
+              <div class="toggle-track"></div>
+              <div class="toggle-thumb"></div>
+            </label>
+          </div>
+        </div>
         <div class="card-row" style="align-items:flex-start;padding-top:12px"><span class="card-label" style="padding-top:2px"><i class="ti ti-notes"></i>Notiz</span>
           <textarea id="ekt-notiz" style="flex:1;border:none;background:transparent;font-size:17px;color:var(--tx);font-family:inherit;outline:none;text-align:left;resize:none;height:60px" placeholder="Optional…">${t.notiz||""}</textarea>
         </div>
@@ -1928,6 +1929,8 @@ function saveEktTermin(date,idx){
   entry.min=AppState.et.min||80;
   if(AppState.et.typ)entry.typ=AppState.et.typ;
   entry.notiz=document.getElementById("ekt-notiz").value.trim();
+  const abEl=document.getElementById("ekt-abgesagt");
+  if(abEl){if(abEl.checked)entry.abgesagt=true;else delete entry.abgesagt;}
   // Move to new date if changed
   if(newDate!==date){
     termine[date].splice(idx,1);
@@ -2225,8 +2228,8 @@ function renderTerminDetail(date,idx){
   const dow=wt[new Date(date).getDay()];
   const isPruef=e.typ==="pruef";
   const isSonder=e.typ==="ueberland"||e.typ==="autobahn"||e.typ==="nacht";
-  const typLabel=isPruef?"Prüfung":isSonder?{ueberland:"Überlandfahrt",autobahn:"Autobahnfahrt",nacht:"Nachtfahrt"}[e.typ]||e.typ:"Fahrstunde";
-  const barCol=isPruef?"#E24B4A":isSonder?"#378ADD":"#639922";
+  const typLabel=(isPruef?"Prüfung":isSonder?{ueberland:"Überlandfahrt",autobahn:"Autobahnfahrt",nacht:"Nachtfahrt"}[e.typ]||e.typ:"Fahrstunde")+(e.abgesagt?" · kurzfristig abgesagt":"");
+  const barCol=e.abgesagt?"#6E7480":isPruef?"#E24B4A":isSonder?"#14458C":"#4599DF";
   const gfaCount=GRUNDFAHRAUFGABEN.filter(g=>((s.gfa||{})[g.key]||0)>0).length;
   const notizText=(s.notizen&&s.notizen.length)?s.notizen.map(n=>n.text).join('\n'):'';
 
@@ -2888,6 +2891,10 @@ function renderAbrechnung(weekOffset=0){
   const maxMonthMin=sortedMonths[0]?.[1]||1;
   // Satz-Historie (neuester zuerst)
   const satzHistorie=getSatzHistorie().slice().sort((a,b)=>b.ab.localeCompare(a.ab));
+  // Kurzfristige Absagen getrennt ausweisen (in den Summen oben enthalten)
+  const ausWoche=getAusfallSumme(wocheInRange);
+  const ausMonat=getAusfallSumme(d=>d.startsWith(monatStr));
+  const ausJahr=getAusfallSumme(d=>d.startsWith(jahrStr));
   const nextMonthFirst=(()=>{const d=new Date(now.getFullYear(),now.getMonth()+1,1);return toKey(d.getFullYear(),d.getMonth()+1,d.getDate());})();
   const html=`<div class="screen active" id="scr-abrech">
     <div class="topbar">
@@ -2917,6 +2924,17 @@ function renderAbrechnung(weekOffset=0){
           <div style="font-size:25px;font-weight:700;color:#378ADD;margin-top:4px;white-space:nowrap">${fmtEuro(jahrEuro)}</div>
         </div>
       </div>
+      <!-- Ausfälle (kurzfristige Absagen) – in den Summen oben enthalten -->
+      ${(ausWoche.min||ausMonat.min||ausJahr.min)?`<div class="stat-card" style="margin-bottom:10px;border-left:4px solid #6E7480">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <i class="ti ti-calendar-x" style="font-size:19px;color:#6E7480"></i>
+          <span style="font-size:16px;font-weight:600;color:var(--tx)">Ausfälle · kurzfristig abgesagt</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:15px;color:var(--tx2);margin-bottom:4px"><span>Woche</span><span>${ausWoche.min?ausWoche.min+" min · "+fmtEuro(ausWoche.eur):"–"}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:15px;color:var(--tx2);margin-bottom:4px"><span>${moLang[now.getMonth()]}</span><span>${ausMonat.min?ausMonat.min+" min · "+fmtEuro(ausMonat.eur):"–"}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:15px;color:var(--tx2)"><span>${jahrStr}</span><span>${ausJahr.min?ausJahr.min+" min · "+fmtEuro(ausJahr.eur):"–"}</span></div>
+        <div style="font-size:13px;color:var(--tx3);margin-top:8px">In den Summen oben enthalten.</div>
+      </div>`:""}
       <!-- Woche Mo-Fr mit Navigation -->
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;padding:0 2px">
         <button onclick="renderAbrechnung(${weekOffset-1})" style="background:none;border:none;cursor:pointer;color:var(--accent);font-size:25px;padding:4px 10px"><i class="ti ti-chevron-left"></i></button>
@@ -3093,6 +3111,17 @@ function getEuroSumme(predicate){
   },0);
 }
 function getEuro(prefix){return getEuroSumme(d=>d.startsWith(prefix));}
+// Kurzfristige Absagen: zählen in den Gesamtsummen mit (Ausfallhonorar), werden
+// aber zusätzlich getrennt ausgewiesen, damit sichtbar ist, wie viel davon Ausfall war.
+function getAusfallSumme(predicate){
+  return Object.entries(termine).reduce((acc,[d,ts])=>{
+    if(!predicate(d))return acc;
+    const min=ts.reduce((a,e)=>a+(e.abgesagt?(e.min||0):0),0);
+    if(!min)return acc;
+    acc.min+=min;acc.eur+=(min/60)*getSatzFuerDatum(d);
+    return acc;
+  },{min:0,eur:0});
+}
 function fmtEuro(v){return v.toFixed(2).replace('.',',')+' €';}
 function getKW(date){const d=new Date(Date.UTC(date.getFullYear(),date.getMonth(),date.getDate()));const dayNum=d.getUTCDay()||7;d.setUTCDate(d.getUTCDate()+4-dayNum);const yearStart=new Date(Date.UTC(d.getUTCFullYear(),0,1));return Math.ceil((((d-yearStart)/86400000)+1)/7);}
 
@@ -3104,7 +3133,7 @@ function exportMonatPDF(monatStr){
   function toEuro(v){return v.toFixed(2).replace('.',',')+" €";}
   function toStd(min){const h=Math.floor(min/60);const mm=min%60;return h+"h "+String(mm).padStart(2,"0")+"min";}
   const wochentage=["So","Mo","Di","Mi","Do","Fr","Sa"];
-  let rows='';let total=0;let totalEuro=0;
+  let rows='';let total=0;let totalEuro=0;let totalAus=0;let totalAusEuro=0;
   for(let d=1;d<=dim;d++){
     const ds=toKey(yN,mN,d);
     const date=new Date(yN,mN-1,d);
@@ -3113,12 +3142,15 @@ function exportMonatPDF(monatStr){
     const min=(termine[ds]||[]).reduce((a,t)=>a+(t.min||0),0);
     const satzTag=getSatzFuerDatum(ds);
     const eurTag=(min/60)*satzTag;
+    const ausMin=(termine[ds]||[]).reduce((a,t)=>a+(t.abgesagt?(t.min||0):0),0);
     total+=min;
     totalEuro+=eurTag;
+    totalAus+=ausMin;
+    totalAusEuro+=(ausMin/60)*satzTag;
     rows+=`<tr style="background:${min?'#fff':'#f9f9f9'}">
       <td style="padding:14px 16px;border-bottom:1px solid #eee;color:#666">${wochentage[dow]}</td>
       <td style="padding:14px 16px;border-bottom:1px solid #eee;font-weight:600">${d}. ${monatName}</td>
-      <td style="padding:14px 16px;border-bottom:1px solid #eee;text-align:right">${min?min+' min':'-'}</td>
+      <td style="padding:14px 16px;border-bottom:1px solid #eee;text-align:right">${min?min+' min':'-'}${ausMin?`<div style="font-size:17px;color:#888">davon ${ausMin} min Ausfall</div>`:''}</td>
       <td style="padding:14px 16px;border-bottom:1px solid #eee;text-align:right">${min?toStd(min):'-'}</td>
       <td style="padding:14px 16px;border-bottom:1px solid #eee;text-align:right;color:${min?'#E24B4A':'#999'}">${min?toEuro(eurTag):'-'}</td>
     </tr>`;
@@ -3153,6 +3185,10 @@ function exportMonatPDF(monatStr){
   <td class="total">${total} min</td>
   <td class="total">${toStd(total)}</td>
   <td class="total" style="color:#E24B4A">${toEuro(totalEuro)}</td></tr>
+  ${totalAus?`<tr><td colspan="2" style="padding:12px 16px;color:#666;text-align:right">davon Ausfälle (kurzfristige Absagen)</td>
+  <td style="padding:12px 16px;color:#666;text-align:right">${totalAus} min</td>
+  <td style="padding:12px 16px;color:#666;text-align:right">${toStd(totalAus)}</td>
+  <td style="padding:12px 16px;color:#666;text-align:right">${toEuro(totalAusEuro)}</td></tr>`:''}
   </table>
   <br><div style="display:flex;flex-direction:column;gap:12px;margin-top:16px"><button onclick="window.print()" style="background:#FF6B2B;color:white;border:none;padding:52px 16px;border-radius:18px;font-size:28px;font-weight:700;cursor:pointer;width:100%">🖨️ Drucken / Als PDF speichern</button><button onclick="window.close()" style="background:#eee;color:#333;border:none;padding:52px 16px;border-radius:18px;font-size:28px;font-weight:700;cursor:pointer;width:100%">✕ Schließen</button></div>
   </body></html>`;
