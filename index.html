@@ -1371,9 +1371,16 @@ function renderWochenAnsicht(anker){
         let cls="wchip-g";
         if(isTheorie)cls="wchip-w";
         else if(e.typ==="pruef")cls="wchip-r";
-        else if(e.typ==="ueberland")cls="wchip-y";
-        else if(e.typ==="nacht")cls="wchip-k";
-        else if(e.typ==="autobahn")cls="wchip-b";
+        else{
+          const _notizLc=(e.notiz||"").toLowerCase();
+          const _sonderTyp=(e.typ==="ueberland"||e.typ==="autobahn"||e.typ==="nacht")?e.typ
+            :_notizLc.includes("überland")?"ueberland"
+            :_notizLc.includes("autobahn")?"autobahn"
+            :_notizLc.includes("nacht")?"nacht":"";
+          if(_sonderTyp==="ueberland")cls="wchip-y";
+          else if(_sonderTyp==="nacht")cls="wchip-k";
+          else if(_sonderTyp==="autobahn")cls="wchip-b";
+        }
         const tapAction=(isTheorie||isAuffrisch)?`renderTagAnsicht('${key}')`:`renderTerminDetail('${key}',${idx})`;
         html+=`<div class="woche-chip ${cls}" onclick="${tapAction}">
           <div class="wc-time">${e.uhr} · ${e.min} min</div>
