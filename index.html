@@ -492,6 +492,15 @@ let termineTrash=load("fs_trash",[]);
 
 function toKey(y,m,d){return y+"-"+String(m).padStart(2,"0")+"-"+String(d).padStart(2,"0");}
 function todayStr(){const t=new Date();return toKey(t.getFullYear(),t.getMonth()+1,t.getDate());}
+// Anzahl der bereits gefahrenen Übungsstunden eines Schülers (vergangene Termine,
+// ohne Prüfungen und ohne kurzfristig abgesagte)
+function gefahrenAnzahl(sid){
+  let n=0;
+  Object.entries(termine).forEach(([d,ts])=>ts.forEach(t=>{
+    if(t.sid===sid&&t.typ!=="pruef"&&!t.abgesagt&&_terminVorbei(d,t.uhr,t.min))n++;
+  }));
+  return n;
+}
 function _terminVorbei(datum,uhr,min){
   const td=todayStr();
   if(datum<td)return true;
@@ -738,7 +747,10 @@ function renderDashboard(dashDateOffset=0,fixedDate=null){
           ontouchmove="_lpEnd()">
           ${s.foto?`<div class="avatar" style="overflow:hidden;flex-shrink:0"><img src="${s.foto}" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/></div>`:`<div class="avatar av-${s.farbe}">${initials(s)}</div>`}
           <div class="item-info"><div class="item-name" style="color:${fieldTxtT||"var(--tx)"}"><div class="item-name-first">${s.vorname}${nick}</div><div class="item-name-last" style="color:${fieldTxt2T||"var(--tx2)"}">${s.nachname}</div></div><div class="item-sub" style="color:${fieldTxt2T||"var(--tx2)"}">${t.uhr}–${endZeit}Uhr · ${t.min} min${isPruefT?(()=>{const _mp=(s.pruefungen||[]).find(p=>p.datum===anzeigeDatum);const _po=(_mp&&_mp.prufort)||s.prufort;const _ab=_mp&&_mp.abfahrt;return(_po?" · "+_po:"")+(_ab?" · ab "+_ab:"");})():""}${(t.notiz&&t.notiz.trim().toLowerCase()!=="prüfung")?" · "+t.notiz:""}</div></div>
-          ${isPruefT?`<span class="badge" style="background:#E24B4A;color:white">Prüfung</span>`:`<span class="badge badge-${s.klasse}">${s.klasse}</span>`}
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0">
+            ${isPruefT?`<span class="badge" style="background:#E24B4A;color:white">Prüfung</span>`:`<span class="badge badge-${s.klasse}">${s.klasse}</span>`}
+            <span class="badge" title="gefahrene Übungsstunden" style="background:${(sonderTypT==='ueberland'&&!t.abgesagt)?'rgba(0,0,0,.12)':'rgba(255,255,255,.28)'};color:${fieldTxtT||'var(--tx)'};font-size:13px;padding:2px 8px">${gefahrenAnzahl(s.id)} Std.</span>
+          </div>
           <i class="ti ti-chevron-right" style="color:${fieldTxt2T||"var(--tx3)"};font-size:18px"></i>
         </div>
       </div>${_wrapClose}`;
