@@ -428,6 +428,9 @@ const WEITERE_UEBUNGSPUNKTE=[
   {key:"stadtautobahn",label:"",            icon:"autobahnschild"},
   {key:"strassenbahn",label:"",               icon:"strassenbahnschild"},
   {key:"vorfahrt",     label:"",               icon:"vorfahrtschild"},
+  {key:"kreisverkehr", label:"",               icon:"kreisverkehrschild"},
+  {key:"verkehrsberuhigt",label:"",            icon:"spielstrasseschild"},
+  {key:"abfahrtkontrolle",label:"Abfahrtkontrolle",icon:"abfahrtkontrolle"},
 ];
 const SONDER=[{key:"ueberland",label:"Überlandfahrt",icon:"ti-trees",min:270},{key:"autobahn",label:"Autobahnfahrt",icon:"ti-road",min:225},{key:"nacht",label:"Nachtfahrt",icon:"ti-moon",min:135}];
 const MONATE=["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
@@ -474,7 +477,7 @@ function renderCommPanel(phone){
 function saveAll(){
   const ids=new Set(schueler.map(s=>s.id));
   Object.keys(termine).forEach(d=>{
-    termine[d]=termine[d].filter(t=>t.sid&&(ids.has(t.sid)||t.sid.startsWith("__auffrisch__")||t.sid.startsWith("__theorie__")));
+    termine[d]=termine[d].filter(t=>t.sid&&(ids.has(t.sid)||isFreiSid(t.sid)||t.sid.startsWith("__theorie__")));
     if(!termine[d].length)delete termine[d];
   });
   save("fs_schueler",schueler);
@@ -502,6 +505,11 @@ function _adjWeekday(dateStr,dir){const d=new Date(dateStr);do{d.setDate(d.getDa
 function wochentagKurz(dateStr){return["So","Mo","Di","Mi","Do","Fr","Sa"][new Date(dateStr).getDay()];}
 function initials(s){return s.vorname[0]+s.nachname[0];}
 function getS(id){return schueler.find(s=>s.id===id);}
+// "Freie" Termine ohne Schülerkarte: Auffrischung (__auffrisch__:Name) und Vertretungsfahrt (__vertretung__:Name)
+function isFreiSid(sid){return !!sid&&(sid.startsWith("__auffrisch__")||sid.startsWith("__vertretung__"));}
+function isVertretungSid(sid){return !!sid&&sid.startsWith("__vertretung__");}
+function freiName(sid){return sid?sid.replace(/^__(auffrisch|vertretung)__:/,""):"";}
+function freiLabel(sid){return (isVertretungSid(sid)?"Vertretung: ":"Auffrischung: ")+freiName(sid);}
 function fmtDate(d){const p=d.split("-");return{day:parseInt(p[2]),mon:MONATE_K[parseInt(p[1])-1],year:p[0]};}
 function isWeekday(y,m,d){const dw=new Date(y,m-1,d).getDay();return dw>=1&&dw<=5;}
 function isBefore(y,m,d){return new Date(y,m-1,d)<START_DATE;}
@@ -534,7 +542,7 @@ function renderDashboard(dashDateOffset=0,fixedDate=null){
   Object.entries(termine).forEach(([datum,ts])=>{
     if(datum<td)return;
     ts.forEach(t=>{
-      if(!t.sid||t.sid.startsWith("__auffrisch__"))return;
+      if(!t.sid||isFreiSid(t.sid))return;
       if(t.typ!=="pruef")return;
       const k=t.sid+"_"+datum;
       if(_pruefSeen.has(k))return;
@@ -676,6 +684,32 @@ function renderDashboard(dashDateOffset=0,fixedDate=null){
             <div class="avatar" style="background:rgba(0,0,0,0.06);color:var(--tx2);flex-shrink:0"><i class="ti ti-book" style="font-size:20px"></i></div>
             <div class="item-info"><div class="item-name">${titel}</div><div class="item-sub">${t.uhr}–${endZeitT}Uhr · ${t.min} min${t.notiz?" · "+t.notiz:""}</div></div>
             <span class="badge" style="background:rgba(0,0,0,0.06);color:var(--tx2)">Theorie</span>
+          </div>
+        </div>${_wrapClose}`;
+        return;
+      }
+      if(isFreiSid(t.sid)){
+        const isVertF=isVertretungSid(t.sid);
+        const nameF=freiName(t.sid);
+        const sonderF=t.typ==='ueberland'||t.typ==='autobahn'||t.typ==='nacht'?t.typ:'';
+        const hexF=t.abgesagt?"#6E7480":t.typ==="pruef"?"#E24B4A":sonderF==='autobahn'?"#14458C":sonderF==='ueberland'?"#E8B923":sonderF==='nacht'?"#1A1A1A":"#4599DF";
+        const txF=(sonderF==='ueberland'&&!t.abgesagt)?"#141414":"#ffffff";
+        const tx2F=(sonderF==='ueberland'&&!t.abgesagt)?"rgba(20,20,20,.75)":"rgba(255,255,255,.8)";
+        const endZeitF=(()=>{const [h,m]=t.uhr.split(":").map(Number);const tot=h*60+m+t.min;return String(Math.floor(tot/60)%24).padStart(2,"0")+":"+String(tot%60).padStart(2,"0");})();
+        const realIdxF=(termine[anzeigeDatum]||[]).findIndex(x=>x===t);
+        const _elIdF=`swipe-dt-${anzeigeDatum}-${realIdxF}`;
+        const autoNF=isVertF?"":"Auffrischung";
+        cardsHtml+=`${_wrapOpen}<div class="swipe-wrap" style="height:100%;margin-bottom:0">
+          <div class="swipe-del-bg" onclick="_confirmDelDashTermin('${anzeigeDatum}',${realIdxF})"><i class="ti ti-trash"></i></div>
+          <div class="swipe-item list-item" id="${_elIdF}" style="user-select:none;height:100%;box-shadow:0 12px 34px rgba(0,0,0,0.5);background:${hexF}"
+            onclick="handleDashFreiTap('${_elIdF}','${anzeigeDatum}',${realIdxF})"
+            oncontextmenu="event.preventDefault();showTerminActions('${anzeigeDatum}',${realIdxF},'')"
+            ontouchstart="_lpStart(event,'${anzeigeDatum}',${realIdxF},'')"
+            ontouchend="_lpEnd()" ontouchmove="_lpEnd()">
+            <div class="avatar" style="background:rgba(255,255,255,.22);color:${txF};flex-shrink:0"><i class="ti ti-${isVertF?'replace':'user-check'}" style="font-size:20px"></i></div>
+            <div class="item-info"><div class="item-name" style="color:${txF}">${nameF}</div><div class="item-sub" style="color:${tx2F}">${t.uhr}–${endZeitF}Uhr · ${t.min} min${(t.notiz&&t.notiz.trim()!==autoNF)?" · "+t.notiz:""}</div></div>
+            <span class="badge" style="background:rgba(255,255,255,.25);color:${txF}">${isVertF?"Vertretung":"Auffrischung"}</span>
+            <i class="ti ti-chevron-right" style="color:${tx2F};font-size:18px"></i>
           </div>
         </div>${_wrapClose}`;
         return;
@@ -927,6 +961,11 @@ function handleDashTerminTap(elId,sid,returnDate){
   const el=document.getElementById(elId);
   if(el&&el.classList.contains("swiped")){el.style.transition="transform .2s ease";el.style.transform="translateX(0)";el.classList.remove("swiped");return;}
   if(sid)renderDashSchueler(sid,returnDate);
+}
+function handleDashFreiTap(elId,date,idx){
+  const el=document.getElementById(elId);
+  if(el&&el.classList.contains("swiped")){el.style.transition="transform .2s ease";el.style.transform="translateX(0)";el.classList.remove("swiped");return;}
+  showTerminActions(date,idx,'');
 }
 function handleTagTerminTap(elId,date,idx){
   const el=document.getElementById(elId);
@@ -1362,10 +1401,10 @@ function renderWochenAnsicht(anker){
     }else{
       items.forEach(({e,idx})=>{
         const isTheorie=e.typ==="theorie"||(e.sid&&e.sid.startsWith("__theorie__"));
-        const isAuffrisch=e.sid&&e.sid.startsWith("__auffrisch__");
+        const isAuffrisch=e.sid&&isFreiSid(e.sid);
         let name;
         if(isTheorie){name=(e.sid&&e.sid.indexOf(":")>=0)?e.sid.split(":").slice(1).join(":"):"Theorie";}
-        else if(isAuffrisch){name=e.sid.replace("__auffrisch__:","");}
+        else if(isAuffrisch){name=freiName(e.sid);}
         else{
           const s=getS(e.sid);if(!s)return;
           name=s.spitz||s.vorname;
@@ -1419,7 +1458,7 @@ function renderCalDetail(){
   el.innerHTML=html;
 }
 function _removeOffenePruefungFuerTermin(t,date){
-  if(!t||t.typ!=="pruef"||!t.sid||t.sid.startsWith("__auffrisch__"))return;
+  if(!t||t.typ!=="pruef"||!t.sid||isFreiSid(t.sid))return;
   const ps=getS(t.sid);
   if(!ps||!ps.pruefungen)return;
   const idx=ps.pruefungen.findIndex(p=>p.datum===date&&(p.bestanden===null||p.bestanden===undefined));
@@ -1440,7 +1479,7 @@ function _deleteTerminData(date,idx,pushTrash){
 }
 function delKalTermin(key,i){
   if(!termine[key])return;
-  const t=termine[key][i];const s=getS(t.sid);const name=s?s.vorname+" "+s.nachname:"Termin";
+  const t=termine[key][i];const s=getS(t.sid);const name=isFreiSid(t.sid)?freiName(t.sid):(s?s.vorname+" "+s.nachname:"Termin");
   showModal({
     title:"Termin löschen",
     msg:`${name} · ${t.uhr} Uhr wirklich löschen?`,
@@ -1487,6 +1526,7 @@ function renderNeuKalTermin(date){
           <div style="display:flex;gap:6px">
             <button class="pill active" id="kpers-schueler" onclick="setKPers('schueler')" style="font-size:15px;padding:7px 14px">Schüler</button>
             <button class="pill" id="kpers-auffrisch" onclick="setKPers('auffrisch')" style="font-size:15px;padding:7px 14px">Auffrischung</button>
+            <button class="pill" id="kpers-vertretung" onclick="setKPers('vertretung')" style="font-size:15px;padding:7px 14px">Vertretung</button>
             <button class="pill" id="kpers-theorie" onclick="setKPers('theorie')" style="font-size:15px;padding:7px 14px">Theorie</button>
           </div>
         </div>
@@ -1500,6 +1540,9 @@ function renderNeuKalTermin(date){
         </div>
         <div class="card-row" id="k-auffrisch-row" style="display:none"><span class="card-label"><i class="ti ti-user-check"></i>Name</span>
           <input type="text" id="k-auffrisch-name" placeholder="Name eingeben" style="flex:1;text-align:left;border:none;background:transparent;font-size:17px;color:var(--tx);outline:none"/>
+        </div>
+        <div class="card-row" id="k-vertretung-row" style="display:none"><span class="card-label"><i class="ti ti-replace"></i>Name</span>
+          <input type="text" id="k-vertretung-name" placeholder="Name des Fahrschülers" style="flex:1;text-align:left;border:none;background:transparent;font-size:17px;color:var(--tx);outline:none"/>
         </div>
         <div class="card-row" id="k-theorie-row" style="display:none"><span class="card-label"><i class="ti ti-book"></i>Titel</span>
           <input type="text" id="k-theorie-titel" placeholder="z.B. Theorie Grundstoff" value="Theoriestunde" style="flex:1;text-align:left;border:none;background:transparent;font-size:17px;color:var(--tx);outline:none"/>
@@ -1598,6 +1641,8 @@ function setKPers(typ){
   AppState.kal.pers=typ;
   document.getElementById("kpers-schueler").classList.toggle("active",typ==="schueler");
   document.getElementById("kpers-auffrisch").classList.toggle("active",typ==="auffrisch");
+  var vtBtn=document.getElementById("kpers-vertretung");if(vtBtn)vtBtn.classList.toggle("active",typ==="vertretung");
+  var vtRow=document.getElementById("k-vertretung-row");if(vtRow)vtRow.style.display=typ==="vertretung"?"":"none";
   var thBtn=document.getElementById("kpers-theorie");if(thBtn)thBtn.classList.toggle("active",typ==="theorie");
   document.getElementById("k-schueler-row").style.display=typ==="schueler"?"":"none";
   document.getElementById("k-auffrisch-row").style.display=typ==="auffrisch"?"":"none";
@@ -1614,7 +1659,7 @@ function saveKalTermin(date){
   const uhr=document.getElementById("k-uhr")?document.getElementById("k-uhr").value:"";
   if(!uhr){showToast("toast-kal","Bitte Startzeit eingeben");return;}
   const persMode=AppState.kal.pers||"schueler";
-  const isAuffrisch=persMode==="auffrisch";
+  const isAuffrisch=persMode==="auffrisch"||persMode==="vertretung";
   const isTheorie=persMode==="theorie";
   let sid;
   if(isTheorie){
@@ -1635,14 +1680,14 @@ function saveKalTermin(date){
       return;
     }
   } else {
-    const nameEl=document.getElementById("k-auffrisch-name");
+    const nameEl=document.getElementById(persMode==="vertretung"?"k-vertretung-name":"k-auffrisch-name");
     const name=nameEl?nameEl.value.trim():"";
     if(!name){
       if(nameEl){nameEl.classList.add("err-border");setTimeout(()=>nameEl.classList.remove("err-border"),1500);}
       showToast("toast-kal","Bitte Namen eingeben");
       return;
     }
-    sid="__auffrisch__:"+name;
+    sid=(persMode==="vertretung"?"__vertretung__:":"__auffrisch__:")+name;
   }
   const min=AppState.kal.min||80;
   if(!termine[date])termine[date]=[];
@@ -1654,7 +1699,7 @@ function saveKalTermin(date){
   termine[date].push({sid,uhr,min,notiz:notizVal||autoN,typ:kalTypStr||ktyp2||''});
   termine[date].sort((a,b)=>a.uhr.localeCompare(b.uhr));
   // If Prüfung: add to student's Prüfungen list
-  if((AppState.kal.typ||"normal")==="pruef"&&!sid.startsWith("__auffrisch__")){
+  if((AppState.kal.typ||"normal")==="pruef"&&!isFreiSid(sid)){
     const ps=getS(sid);
     if(ps){
       if(!ps.pruefungen)ps.pruefungen=[];
@@ -1808,9 +1853,9 @@ function renderEditKalTermin(date,idx){
   const t=(termine[date]||[])[idx];if(!t)return;
   const isTheorie3=t.typ==="theorie"||(t.sid&&t.sid.startsWith("__theorie__"));
   const theorieTitel3=isTheorie3?((t.sid&&t.sid.indexOf(":")>=0)?t.sid.split(":").slice(1).join(":"):"Theorie"):"";
-  const isAuffrisch3=t.sid&&t.sid.startsWith("__auffrisch__");
+  const isAuffrisch3=t.sid&&isFreiSid(t.sid);
   const s=(isAuffrisch3||isTheorie3)?null:getS(t.sid);if(!s&&!isAuffrisch3&&!isTheorie3)return;
-  const auffrischName3=isAuffrisch3?t.sid.replace("__auffrisch__:",""):"";
+  const auffrischName3=isAuffrisch3?freiName(t.sid):"";
   AppState.et.date=date;AppState.et.idx=idx;AppState.et.min=t.min;AppState.et.typ=t.typ||'normal';AppState.et.isAuffrisch=isAuffrisch3;AppState.et.isTheorie=isTheorie3;
   const _backSid=AppState.et.backSid;
   const fd=fmtDate(date);
@@ -1821,13 +1866,13 @@ function renderEditKalTermin(date,idx){
     </div>
     <div class="scroll">
       <div style="display:flex;align-items:center;gap:14px;margin-bottom:4px">
-        ${isTheorie3?`<div class="avatar" style="background:rgba(0,0,0,0.06);color:var(--tx2)"><i class="ti ti-book" style="font-size:20px"></i></div>`:isAuffrisch3?`<div class="avatar" style="background:rgba(255,107,43,.15);color:var(--accent)">🔄</div>`:(s.foto?`<div class="avatar" style="overflow:hidden;flex-shrink:0"><img src="${s.foto}" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/></div>`:`<div class="avatar av-${s.farbe}">${initials(s)}</div>`)}
+        ${isTheorie3?`<div class="avatar" style="background:rgba(0,0,0,0.06);color:var(--tx2)"><i class="ti ti-book" style="font-size:20px"></i></div>`:isAuffrisch3?`<div class="avatar" style="background:rgba(255,107,43,.15);color:var(--accent)">${isVertretungSid(t.sid)?'<i class="ti ti-replace" style="font-size:20px"></i>':'🔄'}</div>`:(s.foto?`<div class="avatar" style="overflow:hidden;flex-shrink:0"><img src="${s.foto}" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/></div>`:`<div class="avatar av-${s.farbe}">${initials(s)}</div>`)}
         <div><div style="font-size:20px;font-weight:600">${isTheorie3?theorieTitel3:isAuffrisch3?auffrischName3:s.vorname+" "+s.nachname}</div>
         <div style="font-size:15px;color:var(--tx2)">${fd.day}. ${fd.mon} ${fd.year}</div></div>
       </div>
       <div><div class="sec-label">Termin</div>
       <div class="card">
-        ${isTheorie3?`<div class="card-row"><span class="card-label"><i class="ti ti-book"></i>Titel</span><input type="text" id="ekt-theorie-titel" value="${theorieTitel3}" style="flex:1;text-align:right;border:none;background:transparent;font-size:17px;color:var(--tx);outline:none"/></div>`:isAuffrisch3?`<div class="card-row"><span class="card-label"><i class="ti ti-user-check"></i>Name</span><span style="flex:1;text-align:right;font-size:17px">${auffrischName3}</span></div>`:`<div class="card-row"><span class="card-label"><i class="ti ti-user"></i>Schüler</span>
+        ${isTheorie3?`<div class="card-row"><span class="card-label"><i class="ti ti-book"></i>Titel</span><input type="text" id="ekt-theorie-titel" value="${theorieTitel3}" style="flex:1;text-align:right;border:none;background:transparent;font-size:17px;color:var(--tx);outline:none"/></div>`:isAuffrisch3?`<div class="card-row"><span class="card-label"><i class="ti ti-${isVertretungSid(t.sid)?'replace':'user-check'}"></i>${isVertretungSid(t.sid)?'Vertretung':'Name'}</span><span style="flex:1;text-align:right;font-size:17px">${auffrischName3}</span></div>`:`<div class="card-row"><span class="card-label"><i class="ti ti-user"></i>Schüler</span>
           <select id="ekt-sid">
             ${schueler.map(sc=>"<option value=\""+sc.id+"\" "+(sc.id===t.sid?"selected":"")+">"+sc.vorname+" "+sc.nachname+(sc.spitz?" «"+sc.spitz+"»":"")+"</option>").join("")}
           </select></div>`}
@@ -1942,7 +1987,7 @@ function saveEktTermin(date,idx){
     termine[date].sort((a,b)=>a.uhr.localeCompare(b.uhr));
   }
   // If Prüfung type: sync to student's pruefungen
-  if(entry.typ==="pruef"&&!entry.sid.startsWith("__auffrisch__")){
+  if(entry.typ==="pruef"&&!isFreiSid(entry.sid)){
     const ps=getS(entry.sid);
     if(ps){
       if(!ps.pruefungen)ps.pruefungen=[];
@@ -2004,7 +2049,7 @@ function showTerminActions(date,idx,sid){
   const t=(termine[date]||[])[idx];if(!t)return;
   const isTheorieT=t.typ==="theorie"||(t.sid&&t.sid.startsWith("__theorie__"));
   const s=getS(sid);
-  const name=isTheorieT?((t.sid&&t.sid.indexOf(":")>=0)?t.sid.split(":").slice(1).join(":"):"Theorie"):(s?s.vorname+" "+s.nachname:"Termin");
+  const name=isTheorieT?((t.sid&&t.sid.indexOf(":")>=0)?t.sid.split(":").slice(1).join(":"):"Theorie"):isFreiSid(t.sid)?freiLabel(t.sid):(s?s.vorname+" "+s.nachname:"Termin");
   const fd=fmtDate(date);
   const btns=[
     {label:"\u270e Bearbeiten",primary:true,action:`closeModal();renderEditKalTermin('${date}',${idx})`},
@@ -2055,9 +2100,9 @@ function renderTerminTrash(){
     termineTrash.forEach((entry,i)=>{
       const t=entry.termin||{};
       const isTheorie=t.typ==="theorie"||(t.sid&&t.sid.startsWith("__theorie__"));
-      const isAuffrisch=t.sid&&t.sid.startsWith("__auffrisch__");
+      const isAuffrisch=t.sid&&isFreiSid(t.sid);
       const s=(isTheorie||isAuffrisch||!t.sid)?null:getS(t.sid);
-      const name=isTheorie?((t.sid&&t.sid.indexOf(":")>=0)?t.sid.split(":").slice(1).join(":"):"Theorie"):isAuffrisch?t.sid.replace("__auffrisch__:",""):(s?s.vorname+" "+s.nachname:"Unbekannt");
+      const name=isTheorie?((t.sid&&t.sid.indexOf(":")>=0)?t.sid.split(":").slice(1).join(":"):"Theorie"):isAuffrisch?freiName(t.sid):(s?s.vorname+" "+s.nachname:"Unbekannt");
       const fd=fmtDate(entry.date);
       inner+=`<div class="list-item" style="cursor:default">
         <div class="item-info"><div class="item-name">${name}</div><div class="item-sub">${fd.day}. ${fd.mon} ${fd.year} \u00b7 ${t.uhr||"?"} Uhr \u00b7 ${t.min||0} min</div></div>
@@ -2072,7 +2117,7 @@ function renderTerminTrash(){
 function _confirmDelDashTermin(date,idx){
   const t=(termine[date]||[])[idx];if(!t)return;
   const s=getS(t.sid);
-  const name=s?s.vorname+" "+s.nachname:"Termin";
+  const name=isFreiSid(t.sid)?freiName(t.sid):(s?s.vorname+" "+s.nachname:"Termin");
   showModal({
     title:"Termin löschen",
     msg:`${name} · ${t.uhr} Uhr wirklich löschen?`,
@@ -2104,14 +2149,14 @@ function _rerenderTag(date){
 function showTagTerminActions(date,idx){
   const t=(termine[date]||[]);const e=t[idx];if(!e)return;
   const isTheorie=e.typ==="theorie"||(e.sid&&e.sid.startsWith("__theorie__"));
-  const isAuffrisch=e.sid&&e.sid.startsWith("__auffrisch__");
+  const isAuffrisch=e.sid&&isFreiSid(e.sid);
   const s=(isAuffrisch||isTheorie)?null:getS(e.sid);
   if(!isAuffrisch&&!isTheorie&&s){
     renderTerminDetail(date,idx);
     return;
   }
   const fd=fmtDate(date);
-  const name=isTheorie?((e.sid&&e.sid.indexOf(":")>=0)?e.sid.split(":").slice(1).join(":"):"Theorie"):("Auffrischung: "+e.sid.replace("__auffrisch__:",""));
+  const name=isTheorie?((e.sid&&e.sid.indexOf(":")>=0)?e.sid.split(":").slice(1).join(":"):"Theorie"):freiLabel(e.sid);
   showModal({title:name,msg:`${fd.day}. ${fd.mon} ${fd.year} · ${e.uhr} Uhr · ${e.min} min`,btns:[
     {label:"Bearbeiten",primary:true,action:`closeModal();renderEditKalTermin('${date}',${idx})`},
     {label:"Löschen",danger:true,action:`closeModal();_confirmDelTagTermin('${date}',${idx})`},
@@ -2272,9 +2317,9 @@ function renderTerminDetail(date,idx){
 }
 function _confirmDelTagTermin(date,idx){
   const t=(termine[date]||[]);const e=t[idx];if(!e)return;
-  const isAuffrisch=e.sid&&e.sid.startsWith("__auffrisch__");
+  const isAuffrisch=e.sid&&isFreiSid(e.sid);
   const s=isAuffrisch?null:getS(e.sid);
-  const name=isAuffrisch?e.sid.replace("__auffrisch__:",""):(s?s.vorname+" "+s.nachname:"Termin");
+  const name=isAuffrisch?freiName(e.sid):(s?s.vorname+" "+s.nachname:"Termin");
   showModal({title:"Termin löschen",msg:`${name} · ${e.uhr} Uhr — wirklich löschen?`,btns:[
     {label:"Löschen",danger:true,action:`_doDelTagTermin('${date}',${idx})`},
     {label:"Abbrechen",action:"closeModal()"},
@@ -2676,6 +2721,9 @@ function _gfaTile(sid,g,cnt){
         :g.icon==="vorfahrtschild"?`<svg id="gfa-icon-${sid}-${g.key}" viewBox="0 0 32 32" width="56" height="56" style="display:block;margin:0 auto 6px;opacity:${cnt>0?1:0.55}"><polygon points="16,1 31,16 16,31 1,16" fill="#FFFFFF" stroke="#000000" stroke-width="0.8"/><polygon points="16,6 26,16 16,26 6,16" fill="#FFCC00"/></svg>`
         :g.icon==="strassenbahnschild"?`<svg id="gfa-icon-${sid}-${g.key}" viewBox="0 0 32 32" width="56" height="56" style="display:block;margin:0 auto 6px;opacity:${cnt>0?1:0.55}"><rect x="1" y="1" width="30" height="30" rx="3" fill="#FFFFFF" stroke="#000000" stroke-width="1.4"/><g fill="#000000"><rect x="6" y="10" width="20" height="11" rx="2"/><rect x="8.5" y="12.3" width="4.3" height="4" fill="#FFFFFF"/><rect x="14" y="12.3" width="4.3" height="4" fill="#FFFFFF"/><rect x="19.5" y="12.3" width="4.3" height="4" fill="#FFFFFF"/><rect x="4" y="21" width="24" height="1.6"/><circle cx="10.5" cy="24" r="1.7"/><circle cx="21.5" cy="24" r="1.7"/><line x1="16" y1="7" x2="16" y2="10" stroke="#000000" stroke-width="1.6"/></g></svg>`
         :g.icon==="bremsauto"?`<svg id="gfa-icon-${sid}-${g.key}" viewBox="0 0 32 32" width="26" height="26" style="display:block;margin:0 auto 6px;opacity:${cnt>0?1:0.55}"><g fill="none" stroke="${cnt>0?'var(--accent)':'var(--tx3)'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20 L12.5 15 Q13.5 12 17 12 L21 12 Q24 12 25 15 L26.5 20"/><rect x="8" y="20" width="21" height="5" rx="2.5"/><circle cx="13" cy="26" r="2" fill="${cnt>0?'var(--accent)':'var(--tx3)'}" stroke="none"/><circle cx="24" cy="26" r="2" fill="${cnt>0?'var(--accent)':'var(--tx3)'}" stroke="none"/></g><g stroke="${cnt>0?'var(--accent)':'var(--tx3)'}" stroke-width="2" stroke-linecap="round"><line x1="1" y1="16" x2="5" y2="16"/><line x1="1" y1="21" x2="4" y2="21"/></g></svg>`
+        :g.icon==="kreisverkehrschild"?`<svg id="gfa-icon-${sid}-${g.key}" viewBox="0 0 32 32" width="56" height="56" style="display:block;margin:0 auto 6px;opacity:${cnt>0?1:0.55}"><circle cx="16" cy="16" r="15" fill="#FFFFFF"/><circle cx="16" cy="16" r="13.6" fill="#0057A8"/><g fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round"><path d="M9.2 20.4 A7.6 7.6 0 0 1 10.3 10.9"/><path d="M19.6 8.6 A7.6 7.6 0 0 1 23.4 17.4"/><path d="M19.4 24.1 A7.6 7.6 0 0 1 12.4 24.9"/></g><g fill="#FFFFFF"><polygon points="10.3,7.6 14.2,10.4 9.6,12.6"/><polygon points="25.6,15.8 23.2,20.2 20.6,16.2"/><polygon points="12.0,27.3 8.2,24.0 12.9,22.8"/></g></svg>`
+        :g.icon==="spielstrasseschild"?`<svg id="gfa-icon-${sid}-${g.key}" viewBox="0 0 32 32" width="56" height="56" style="display:block;margin:0 auto 6px;opacity:${cnt>0?1:0.55}"><rect x="1" y="1" width="30" height="30" rx="3" fill="#0057A8"/><rect x="3" y="3" width="26" height="26" rx="2" fill="#FFFFFF"/><g fill="#000000"><polygon points="4.5,12 9.5,6.5 14.5,12"/><rect x="5.8" y="11.5" width="7.4" height="7.5"/><rect x="8.4" y="15" width="2.2" height="4" fill="#FFFFFF"/><path d="M17 15.5 L18.2 12.6 Q18.6 11.8 19.5 11.8 L24.5 11.8 Q25.4 11.8 25.8 12.6 L27 15.5 L27 18.2 L17 18.2 Z"/><circle cx="19.3" cy="18.6" r="1.4"/><circle cx="25" cy="18.6" r="1.4"/><circle cx="7.2" cy="22" r="1.4"/><rect x="6.2" y="23.6" width="2" height="5"/><circle cx="12" cy="23.4" r="1.1"/><rect x="11.2" y="24.7" width="1.6" height="3.9"/><circle cx="23.5" cy="25" r="2.2"/></g><circle cx="23.5" cy="25" r="1.1" fill="#FFFFFF"/></svg>`
+        :g.icon==="abfahrtkontrolle"?`<svg id="gfa-icon-${sid}-${g.key}" viewBox="0 0 32 32" width="56" height="56" style="display:block;margin:0 auto 6px;opacity:${cnt>0?1:0.55}"><rect width="32" height="32" rx="6" fill="#333333"/><g fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 19 L9.6 14 Q10.4 11.5 13 11.5 L19 11.5 Q21.6 11.5 22.4 14 L24 19"/><rect x="6" y="19" width="20" height="5.5" rx="2.2"/><circle cx="10.5" cy="26.5" r="1.8" fill="#FFFFFF" stroke="none"/><circle cx="21.5" cy="26.5" r="1.8" fill="#FFFFFF" stroke="none"/></g><circle cx="23.5" cy="8.5" r="6" fill="${cnt>0?'var(--accent)':'#6E7480'}"/><path d="M20.6 8.6 L22.7 10.6 L26.5 6.4" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`
         :g.icon==="pfeil_lang_links"?_pfeilLangSVG(sid,g.key,cnt,false)
         :g.icon==="pfeil_lang_rechts"?_pfeilLangSVG(sid,g.key,cnt,true)
         :g.dual?`<div id="gfa-icon-${sid}-${g.key}" style="width:26px;height:26px;border-radius:6px;background:#333333;display:flex;align-items:center;justify-content:center;gap:1px;margin:0 auto 6px;opacity:${cnt>0?1:0.55}"><i class="ti ${g.icon}" style="font-size:13px;color:#FFFFFF"></i><i class="ti ${g.icon}" style="font-size:13px;color:#FFFFFF"></i></div>`
