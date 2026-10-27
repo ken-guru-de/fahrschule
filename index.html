@@ -410,8 +410,8 @@ function showToast(id,msg){
   if(el&&msgEl){msgEl.textContent=msg;el.classList.add("show");setTimeout(()=>el.classList.remove("show"),2000);}
 }
 const FARBEN=[{key:"blue",bg:"#B5D4F4",tx:"#0C447C"},{key:"teal",bg:"#9FE1CB",tx:"#085041"},{key:"purple",bg:"#CECBF6",tx:"#3C3489"},{key:"coral",bg:"#F5C4B3",tx:"#712B13"},{key:"green",bg:"#C0DD97",tx:"#27500A"},{key:"amber",bg:"#FAC775",tx:"#633806"}];
-const KLASSEN=["B","BA","B197","B17"];
-const PRUFORTE=["DEKRA Pankow","DEKRA Ferdi","TÜV Hornbach"];
+let KLASSEN=["B","BA","B197","B17"];
+let PRUFORTE=["DEKRA Pankow","DEKRA Ferdi","TÜV Hornbach"];
 const GRUNDFAHRAUFGABEN=[
   {key:"laengs",      label:"Einparken längs",          icon:"parkschild"},
   {key:"rechts",      label:"Einparken quer",            icon:"parkschild"},
@@ -434,12 +434,55 @@ const WEITERE_UEBUNGSPUNKTE=[
   {key:"abfahrtkontrolle",label:"Abfahrtkontrolle",icon:"abfahrtkontrolle"},
 ];
 const SONDER=[{key:"ueberland",label:"Überlandfahrt",icon:"ti-trees",min:270},{key:"autobahn",label:"Autobahnfahrt",icon:"ti-road",min:225},{key:"nacht",label:"Nachtfahrt",icon:"ti-moon",min:135}];
+// ── EINSTELLUNGEN ─────────────────────────────────────────────────────────────
+// Pflichtzeit laut FahrschAusbO Anlage 4, Klasse B (5 / 4 / 3 × 45 min).
+// Danach richtet sich der "erledigt"-Haken einer Sonderfahrt – unabhängig von der
+// eingestellten Termin-Dauer, damit eine spätere Änderung keine Haken umkippt.
+const SONDER_PFLICHT={ueberland:225,autobahn:180,nacht:135};
+const EINST_DEFAULT={
+  minNormal:80,minTheorie:90,minPruef:100,
+  sonder:{ueberland:{fahrt:225,anfahrt:0},autobahn:{fahrt:180,anfahrt:40},nacht:{fahrt:135,anfahrt:0}},
+  prueforte:["DEKRA Pankow","DEKRA Ferdi","TÜV Hornbach"],
+  klassen:["B","BA","B197","B17"],
+  pdfFahrschule:"Fahrschule Aras",pdfFahrlehrer:"",
+  backupTage:14
+};
+function _einstMerge(e){
+  const d=JSON.parse(JSON.stringify(EINST_DEFAULT));
+  if(!e||typeof e!=="object")return d;
+  ["minNormal","minTheorie","minPruef","backupTage"].forEach(k=>{if(typeof e[k]==="number"&&isFinite(e[k])&&e[k]>=0)d[k]=e[k];});
+  ["pdfFahrschule","pdfFahrlehrer"].forEach(k=>{if(typeof e[k]==="string")d[k]=e[k];});
+  ["prueforte","klassen"].forEach(k=>{if(Array.isArray(e[k])){const a=e[k].filter(x=>typeof x==="string"&&x.trim()).map(x=>x.trim());if(a.length)d[k]=a;}});
+  if(e.sonder&&typeof e.sonder==="object")Object.keys(d.sonder).forEach(k=>{const v=e.sonder[k];if(v&&typeof v==="object"){if(typeof v.fahrt==="number")d.sonder[k].fahrt=v.fahrt;if(typeof v.anfahrt==="number")d.sonder[k].anfahrt=v.anfahrt;}});
+  return d;
+}
+let EINST=_einstMerge(null);
+function sonderMin(key){const v=EINST.sonder[key];return v?(v.fahrt||0)+(v.anfahrt||0):0;}
+function sonderDone(s,key){return !!(s&&s.sonder&&!Array.isArray(s.sonder)&&(s.sonder[key]||0)>=SONDER_PFLICHT[key]);}
+function escH(v){return String(v==null?"":v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");}
+// Auswahl-Optionen: der aktuell gespeicherte Wert bleibt erhalten, auch wenn er
+// inzwischen aus der Liste in den Einstellungen entfernt wurde.
+function _optsMit(list,cur){return (cur&&list.indexOf(cur)<0)?list.concat([cur]):list;}
+function _applyEinst(){
+  KLASSEN=EINST.klassen.slice();
+  PRUFORTE=EINST.prueforte.slice();
+  SONDER.forEach(sf=>{sf.min=sonderMin(sf.key);});
+  // Farbe für selbst angelegte Führerscheinklassen
+  const bekannt=["B","BA","B197","B17"];
+  let css="";KLASSEN.forEach(k=>{if(bekannt.indexOf(k)<0)css+=`.badge-${k}{background:#6E7480;color:white;}`;});
+  let st=document.getElementById("klassen-css");
+  if(!st){st=document.createElement("style");st.id="klassen-css";document.head.appendChild(st);}
+  st.textContent=css;
+}
+function saveEinst(){save("fs_einstellungen",EINST);_applyEinst();}
+_applyEinst();
 const MONATE=["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
 const MONATE_K=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
 const START_DATE=new Date(2026,3,15);
 
 function load(k,def){try{const v=localStorage.getItem(k);return v?JSON.parse(v):def;}catch(e){return def;}}
 function save(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true;}catch(e){console.error("save error",k,e);return false;}}
+EINST=_einstMerge(load("fs_einstellungen",null));_applyEinst();
 // saveAll defined below with cloud sync
 function showSyncStatus(msg){
   const el=document.getElementById("sync-status");
@@ -523,7 +566,7 @@ function freiLabel(sid){return (isVertretungSid(sid)?"Vertretung: ":"Auffrischun
 function fmtDate(d){const p=d.split("-");return{day:parseInt(p[2]),mon:MONATE_K[parseInt(p[1])-1],year:p[0]};}
 function isWeekday(y,m,d){const dw=new Date(y,m-1,d).getDay();return dw>=1&&dw<=5;}
 function isBefore(y,m,d){return new Date(y,m-1,d)<START_DATE;}
-function nextSonder(s){if(Array.isArray(s.sonder))return s.sonder.findIndex(x=>!x);const so=s.sonder||{};if(!so.ueberland||so.ueberland<225)return 0;if(!so.autobahn||so.autobahn<220)return 1;if(!so.nacht||so.nacht<135)return 2;return -1;}
+function nextSonder(s){if(Array.isArray(s.sonder))return s.sonder.findIndex(x=>!x);if(!sonderDone(s,"ueberland"))return 0;if(!sonderDone(s,"autobahn"))return 1;if(!sonderDone(s,"nacht"))return 2;return -1;}
 function todayTotalMin(){const td=todayStr();return(termine[td]||[]).reduce((a,e)=>a+(e.min||0),0);}
 function todayMinCheck(){}
 function farbStyle(farbe){const f=FARBEN.find(x=>x.key===farbe)||FARBEN[0];return`background:${f.bg};color:${f.tx}`;}
@@ -580,13 +623,14 @@ function renderDashboard(dashDateOffset=0,fixedDate=null){
         <button class="btn-icon-label" onclick="renderSchuelerListe()"><i class="ti ti-users"></i><span>Schüler</span></button>
         <button class="btn-icon-label" onclick="renderStatistik()"><i class="ti ti-chart-bar"></i><span>Statistik</span></button>
         <button class="btn-icon-label" onclick="toggleDatenMenu()"><i class="ti ti-device-floppy"></i><span>Backup</span></button>
+        <button class="btn-icon-label" onclick="renderEinstellungen()"><i class="ti ti-settings"></i><span>Einstellungen</span></button>
       </div>
     </div>
     <div class="scroll">
       <div class="stat-box stat-glass-blue" style="cursor:pointer;display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-left:12px" onclick="renderAbrechnung()">
         <div class="stat-num" id="ddb-min" style="font-size:42px;flex-shrink:0">0<span class="stat-unit">min</span></div>
         <div id="ddb-eur" style="font-size:20px;font-weight:700;color:#378ADD">0,00&nbsp;€</div>
-      </div>`;
+      </div>${_backupHinweisHTML()}`;
 
   // Find display date based on offset
   let anzeigeDatum=td;
@@ -1047,7 +1091,7 @@ function renderNeuSchueler(fromSid,returnDate){
         <div class="card-row"><span class="card-label"><i class="ti ti-phone"></i>Telefon</span><input type="tel" id="n-tel" value="${s?s.tel||'+49 ':'+49 '}" placeholder="+49 …"/></div>
         <div class="card-row"><span class="card-label"><i class="ti ti-calendar-plus"></i>Beginn</span><input type="date" id="n-bg" value="${s?s.beginn:new Date().toISOString().split("T")[0]}"/></div>
         <div class="card-row"><span class="card-label"><i class="ti ti-license"></i>Klasse</span>
-          <select id="n-kl">${KLASSEN.map(k=>`<option value="${k}" ${s&&s.klasse===k?"selected":""}>${k}</option>`).join("")}</select>
+          <select id="n-kl">${_optsMit(KLASSEN,s&&s.klasse).map(k=>`<option value="${k}" ${s&&s.klasse===k?"selected":""}>${k}</option>`).join("")}</select>
         </div>
         <div class="card-row"><span class="card-label"><i class="ti ti-replace"></i>Umschreiber</span>
           <div style="flex:1;display:flex;justify-content:flex-end">
@@ -1061,7 +1105,7 @@ function renderNeuSchueler(fromSid,returnDate){
         <div class="card-row"><span class="card-label"><i class="ti ti-map-pin"></i>Prüfort</span>
           <select id="n-pf">
             <option value="">Auswählen…</option>
-            ${PRUFORTE.map(p=>`<option value="${p}" ${s&&s.prufort===p?"selected":""}>${p}</option>`).join("")}
+            ${_optsMit(PRUFORTE,s&&s.prufort).map(p=>`<option value="${escH(p)}" ${s&&s.prufort===p?"selected":""}>${escH(p)}</option>`).join("")}
           </select>
         </div>
 
@@ -1081,7 +1125,7 @@ function renderNeuSchueler(fromSid,returnDate){
             <div style="display:flex;align-items:center;gap:6px;margin-top:8px">
               <i class="ti ti-map-pin" style="font-size:16px;color:var(--tx3)"></i>
               <select onchange="setPruefortInline('${s.id}',${pi},this.value)" style="flex:1;border:.5px solid var(--br2);border-radius:6px;background:var(--bg2);font-size:15px;color:var(--tx);padding:5px 6px">
-                ${PRUFORTE.map(o=>`<option value="${o}" ${(p.prufort||s.prufort)===o?"selected":""}>${o}</option>`).join("")}
+                ${_optsMit(PRUFORTE,p.prufort||s.prufort).map(o=>`<option value="${escH(o)}" ${(p.prufort||s.prufort)===o?"selected":""}>${escH(o)}</option>`).join("")}
               </select>
             </div>
             <div style="display:flex;align-items:center;gap:6px;margin-top:6px">
@@ -1523,7 +1567,7 @@ function nextMonth(){
 }
 
 function renderNeuKalTermin(date){
-  AppState.kal.min=80;AppState.kal.typ="normal";AppState.kal.sonderKey=null;AppState.kal.pers="schueler";AppState.kal.alleSchueler=false;
+  AppState.kal.min=EINST.minNormal;AppState.kal.typ="normal";AppState.kal.sonderKey=null;AppState.kal.pers="schueler";AppState.kal.alleSchueler=false;
   const p=date.split("-");
   const lbl=`${parseInt(p[2])}. ${MONATE_K[parseInt(p[1])-1]} ${p[0]}`;
   let html=`<div class="screen active" id="scr-kal-neu">
@@ -1565,7 +1609,7 @@ function renderNeuKalTermin(date){
         <div class="card-row" id="kal-prufort-row" style="display:none">
           <span class="card-label"><i class="ti ti-map-pin"></i>Prüfort</span>
           <select id="k-prufort">
-            ${PRUFORTE.map(p=>`<option value="${p}">${p}</option>`).join("")}
+            ${PRUFORTE.map(p=>`<option value="${escH(p)}">${escH(p)}</option>`).join("")}
           </select>
         </div>
         <div class="card-row"><span class="card-label"><i class="ti ti-clock"></i>Startzeit</span><input type="time" step="300" id="k-uhr" value="09:00" oninput="kalUpdateEnd()"/></div>
@@ -1574,7 +1618,7 @@ function renderNeuKalTermin(date){
           <span class="card-label"><i class="ti ti-hourglass"></i>Minuten</span>
           <div style="display:flex;align-items:center;gap:10px;justify-content:flex-end;flex:1">
             <button class="cir-btn" onclick="changeKalMin(-5);kalUpdateEnd()">−</button>
-            <span id="kal-min-disp" style="font-size:18px;font-weight:500;min-width:52px;text-align:center">80 min</span>
+            <span id="kal-min-disp" style="font-size:18px;font-weight:500;min-width:52px;text-align:center">${EINST.minNormal} min</span>
             <button class="cir-btn" onclick="changeKalMin(5);kalUpdateEnd()">+</button>
           </div>
         </div>
@@ -1605,12 +1649,10 @@ function changeKalMin(d){AppState.kal.min=Math.max(5,Math.min(300,AppState.kal.m
 function setKTyp(typ){
   const pers=typ==="auffrisch"?"auffrisch":typ==="vertretung"?"vertretung":typ==="theorie"?"theorie":"schueler";
   AppState.kal.typ=typ==="vertretung"?"normal":typ;
-  if(typ==="pruef")AppState.kal.min=100;
-  else if(typ==="ueberland")AppState.kal.min=270;
-  else if(typ==="autobahn")AppState.kal.min=225;
-  else if(typ==="nacht")AppState.kal.min=135;
-  else if(typ==="theorie")AppState.kal.min=90;
-  else AppState.kal.min=80;
+  if(typ==="pruef")AppState.kal.min=EINST.minPruef;
+  else if(typ==="ueberland"||typ==="autobahn"||typ==="nacht")AppState.kal.min=sonderMin(typ);
+  else if(typ==="theorie")AppState.kal.min=EINST.minTheorie;
+  else AppState.kal.min=EINST.minNormal;
   const el=document.getElementById("kal-min-disp");if(el)el.textContent=AppState.kal.min+" min";
   const pf=document.getElementById("kal-prufort-row");
   if(pf)pf.style.display=typ==="pruef"?"":"none";
@@ -1748,7 +1790,7 @@ function renderStatistik(){
   const bestanden=alle.filter(p=>p.bestanden).length;
   const quote=gesamt?Math.round((bestanden/gesamt)*100):0;
   const v=[1,2,3,4].map(n=>({n,list:alle.filter(p=>p.versuch===n)}));
-  const ortStats=PRUFORTE.map(o=>{
+  const ortStats=Array.from(new Set(PRUFORTE.concat(alle.map(p=>p.prufort||"").filter(Boolean)))).map(o=>{
     const ps=alle.filter(p=>(p.prufort||"")===o);
     const tot=ps.length,best=ps.filter(p=>p.bestanden).length;
     return{ort:o,tot,best,quote:tot?Math.round((best/tot)*100):null};
@@ -1950,11 +1992,9 @@ function ektUpdateEnd(){
 function setEKTyp(typ){
   AppState.et.typ=typ;
   ["normal","pruef","ueberland","autobahn","nacht","auffrisch"].forEach(t=>{const el=document.getElementById("ektyp-"+t);if(el)el.classList.toggle("active",t===typ);});
-  if(typ==="normal"||typ==="auffrisch")AppState.et.min=80;
-  else if(typ==="pruef")AppState.et.min=100;
-  else if(typ==="ueberland")AppState.et.min=270;
-  else if(typ==="autobahn")AppState.et.min=225;
-  else if(typ==="nacht")AppState.et.min=135;
+  if(typ==="normal"||typ==="auffrisch")AppState.et.min=EINST.minNormal;
+  else if(typ==="pruef")AppState.et.min=EINST.minPruef;
+  else if(typ==="ueberland"||typ==="autobahn"||typ==="nacht")AppState.et.min=sonderMin(typ);
   const el=document.getElementById("et-min-disp");if(el)el.textContent=AppState.et.min+" min";
   ektUpdateEnd();
 }
@@ -2378,8 +2418,156 @@ function toggleDatenMenu(){
   document.body.appendChild(overlay);
 }
 
+
+function _backupErledigt(){try{localStorage.setItem("fs_last_backup",new Date().toISOString());}catch(e){}}
+function _backupTageHer(){
+  try{const v=localStorage.getItem("fs_last_backup");if(!v)return null;
+    const ms=Date.now()-new Date(v).getTime();return Math.max(0,Math.floor(ms/86400000));}catch(e){return null;}
+}
+function _backupText(){
+  const t=_backupTageHer();
+  if(t===null)return "noch keine erfasst";
+  if(t===0)return "heute";
+  if(t===1)return "gestern";
+  return "vor "+t+" Tagen";
+}
+function _backupHinweisHTML(){
+  if(!EINST.backupTage)return "";
+  const t=_backupTageHer();
+  if(t!==null&&t<EINST.backupTage)return "";
+  const txt=t===null?"Noch keine Datensicherung erfasst":"Letzte Datensicherung vor "+t+" Tagen";
+  return `<div onclick="exportDaten().then(()=>renderDashboard())" style="cursor:pointer;display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:var(--r-lg);background:rgba(255,107,43,.10);border:1.5px solid var(--accent);color:var(--tx)">
+    <i class="ti ti-alert-triangle" style="font-size:24px;color:var(--accent)"></i>
+    <div style="flex:1"><div style="font-size:16px;font-weight:700">${txt}</div><div style="font-size:14px;color:var(--tx2)">Tippen, um jetzt zu sichern</div></div>
+    <i class="ti ti-download" style="font-size:22px;color:var(--accent)"></i>
+  </div>`;
+}
+
+// ── EINSTELLUNGEN-SEITE ───────────────────────────────────────────────────────
+function _einstStepper(id,val,fn){
+  return `<div style="display:flex;align-items:center;gap:10px;justify-content:flex-end;flex:1">
+    <button class="cir-btn" onclick="${fn}(-5)">−</button>
+    <span id="${id}" style="font-size:18px;font-weight:500;min-width:64px;text-align:center">${val} min</span>
+    <button class="cir-btn" onclick="${fn}(5)">+</button>
+  </div>`;
+}
+function einstMin(key,d){
+  EINST[key]=Math.max(5,Math.min(300,(EINST[key]||0)+d));saveEinst();
+  const el=document.getElementById("es-"+key);if(el)el.textContent=EINST[key]+" min";
+}
+function einstSonder(key,feld,d){
+  const v=EINST.sonder[key];
+  v[feld]=Math.max(feld==="anfahrt"?0:5,Math.min(feld==="anfahrt"?120:400,(v[feld]||0)+d));saveEinst();
+  const el=document.getElementById("es-"+key+"-"+feld);if(el)el.textContent=v[feld]+" min";
+  const tot=document.getElementById("es-"+key+"-sum");if(tot)tot.textContent=sonderMin(key)+" min";
+}
+function _einstListeHTML(art){
+  const list=EINST[art];
+  return list.map((x,i)=>`<div class="card-row">
+      <span style="flex:1;font-size:17px;color:var(--tx)">${escH(x)}</span>
+      ${list.length>1?`<button class="t-del" onclick="einstListeDel('${art}',${i})"><i class="ti ti-trash"></i></button>`:""}
+    </div>`).join("")+`<div class="card-row" style="gap:8px">
+      <input type="text" id="es-neu-${art}" placeholder="${art==="klassen"?"z. B. BE":"Neuer Prüfort"}" autocapitalize="${art==="klassen"?"characters":"words"}" style="flex:1;border:.5px solid var(--br2);border-radius:6px;background:var(--bg2);font-size:16px;color:var(--tx);padding:8px"/>
+      <button class="cir-btn" style="width:40px;height:40px;color:var(--accent)" onclick="einstListeAdd('${art}')"><i class="ti ti-plus"></i></button>
+    </div>`;
+}
+function _einstListeNeu(art){const el=document.getElementById("es-liste-"+art);if(el)el.innerHTML=_einstListeHTML(art);}
+function einstListeAdd(art){
+  const inp=document.getElementById("es-neu-"+art);if(!inp)return;
+  let v=inp.value.trim();
+  if(art==="klassen")v=v.toUpperCase().replace(/[^A-Z0-9]/g,"");
+  if(!v)return;
+  if(EINST[art].indexOf(v)>=0){inp.value="";return;}
+  EINST[art].push(v);saveEinst();_einstListeNeu(art);
+}
+function einstListeDel(art,i){
+  if(EINST[art].length<=1)return;
+  EINST[art].splice(i,1);saveEinst();_einstListeNeu(art);
+}
+function einstText(key,val){EINST[key]=String(val||"").trim();saveEinst();}
+function einstBackupTage(val){EINST.backupTage=parseInt(val,10)||0;saveEinst();}
+function einstReset(){
+  showModal({
+    title:"Standardwerte",
+    msg:"Termin-Dauern, Sonderfahrten, Prüforte, Klassen, PDF-Kopf und Backup-Erinnerung auf die Standardwerte zurücksetzen? Stundensatz, Schüler und Termine bleiben unverändert.",
+    btns:[
+      {label:"Zurücksetzen",danger:true,action:"_doEinstReset()"},
+      {label:"Abbrechen",action:"closeModal()"},
+    ]
+  });
+}
+function _doEinstReset(){closeModal();EINST=_einstMerge(null);saveEinst();renderEinstellungen();}
+function renderEinstellungen(){
+  const S=EINST.sonder;
+  const sonderRow=(key,label,icon)=>`
+    <div class="card-row" style="flex-direction:column;align-items:stretch;gap:6px;padding:12px 16px">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <span class="card-label" style="color:var(--tx);font-weight:600"><i class="ti ${icon}"></i>${label}</span>
+        <span style="font-size:17px;font-weight:700;color:var(--accent)">Termin: <span id="es-${key}-sum">${sonderMin(key)} min</span></span>
+      </div>
+      <div style="display:flex;align-items:center"><span style="font-size:15px;color:var(--tx2);min-width:90px">Fahrzeit</span>${_einstStepper("es-"+key+"-fahrt",S[key].fahrt,`(d=>einstSonder('${key}','fahrt',d))`)}</div>
+      <div style="display:flex;align-items:center"><span style="font-size:15px;color:var(--tx2);min-width:90px">Anfahrt</span>${_einstStepper("es-"+key+"-anfahrt",S[key].anfahrt,`(d=>einstSonder('${key}','anfahrt',d))`)}</div>
+    </div>`;
+  const inpStyle="flex:1;min-width:0;border:.5px solid var(--br2);border-radius:6px;background:var(--bg2);font-size:16px;color:var(--tx);padding:8px";
+  const html=`<div class="screen active" id="scr-einst">
+    <div class="topbar">
+      <button class="btn-icon" onclick="renderDashboard()"><i class="ti ti-arrow-left"></i></button>
+      <span class="topbar-title">Einstellungen</span>
+    </div>
+    <div class="scroll">
+      <div><div class="sec-label">Termin-Dauer (Vorschlag beim Anlegen)</div>
+      <div class="card">
+        <div class="card-row"><span class="card-label"><i class="ti ti-steering-wheel"></i>Fahrstunde</span>${_einstStepper("es-minNormal",EINST.minNormal,"(d=>einstMin('minNormal',d))")}</div>
+        <div class="card-row"><span class="card-label"><i class="ti ti-school"></i>Theorie</span>${_einstStepper("es-minTheorie",EINST.minTheorie,"(d=>einstMin('minTheorie',d))")}</div>
+        <div class="card-row"><span class="card-label"><i class="ti ti-certificate"></i>Prüfung</span>${_einstStepper("es-minPruef",EINST.minPruef,"(d=>einstMin('minPruef',d))")}</div>
+      </div></div>
+
+      <div><div class="sec-label">Sonderfahrten</div>
+      <div class="card">
+        ${sonderRow("ueberland","Überland","ti-trees")}
+        ${sonderRow("autobahn","Autobahn","ti-road")}
+        ${sonderRow("nacht","Nacht","ti-moon")}
+      </div>
+      <div style="font-size:14px;color:var(--tx3);margin-top:6px;line-height:1.4">Termin = Fahrzeit + Anfahrt. Der Haken „erledigt“ richtet sich nach der Pflichtzeit laut Verordnung (Überland 225, Autobahn 180, Nacht 135 min). Bereits angelegte Termine behalten ihre Minuten.</div>
+      </div>
+
+      <div><div class="sec-label">Stundensatz</div>
+      ${_satzCardHTML()}
+      </div>
+
+      <div><div class="sec-label">Prüforte</div>
+      <div class="card" id="es-liste-prueforte">${_einstListeHTML("prueforte")}</div></div>
+
+      <div><div class="sec-label">Führerscheinklassen</div>
+      <div class="card" id="es-liste-klassen">${_einstListeHTML("klassen")}</div></div>
+
+      <div><div class="sec-label">Abrechnungs-PDF</div>
+      <div class="card">
+        <div class="card-row"><span class="card-label" style="min-width:100px"><i class="ti ti-building"></i>Fahrschule</span><input type="text" value="${escH(EINST.pdfFahrschule)}" onchange="einstText('pdfFahrschule',this.value)" style="${inpStyle}"/></div>
+        <div class="card-row"><span class="card-label" style="min-width:100px"><i class="ti ti-user"></i>Fahrlehrer</span><input type="text" value="${escH(EINST.pdfFahrlehrer)}" placeholder="Dein Name" onchange="einstText('pdfFahrlehrer',this.value)" style="${inpStyle}"/></div>
+      </div></div>
+
+      <div><div class="sec-label">Datensicherung</div>
+      <div class="card">
+        <div class="card-row"><span class="card-label"><i class="ti ti-history"></i>Letzte Sicherung</span><span style="flex:1;text-align:right;font-size:17px;color:var(--tx)">${_backupText()}</span></div>
+        <div class="card-row"><span class="card-label"><i class="ti ti-bell"></i>Erinnern nach</span>
+          <select onchange="einstBackupTage(this.value)" style="${inpStyle};text-align:right">
+            ${[[0,"Aus"],[7,"7 Tagen"],[14,"14 Tagen"],[30,"30 Tagen"]].map(([v,l])=>`<option value="${v}" ${EINST.backupTage===v?"selected":""}>${l}</option>`).join("")}
+          </select>
+        </div>
+      </div>
+      <button class="btn-full" style="margin-top:10px;min-height:48px;padding:12px;font-size:18px" onclick="exportDaten().then(()=>renderEinstellungen())"><i class="ti ti-download"></i> Daten sichern</button>
+      <button class="btn-full" style="margin-top:8px;min-height:48px;padding:12px;font-size:18px" onclick="toggleDatenMenu()"><i class="ti ti-database"></i> Weitere Optionen</button>
+      </div>
+
+      <button class="btn-full" style="min-height:48px;padding:12px;font-size:16px;color:var(--tx3)" onclick="einstReset()"><i class="ti ti-restore"></i> Auf Standardwerte zurücksetzen</button>
+    </div>
+  </div>`;
+  renderApp(html);
+}
+
 async function exportDaten(){
-  const data = { schueler, termine, exportiert: new Date().toISOString() };
+  const data = { schueler, termine, einstellungen: EINST, satzHistorie: getSatzHistorie(), exportiert: new Date().toISOString() };
   const json = JSON.stringify(data, null, 2);
   const datum = new Date().toISOString().split("T")[0];
   const filename = "fahrschule-backup-"+datum+".json";
@@ -2389,6 +2577,7 @@ async function exportDaten(){
     const file = new File([json], filename, {type:"application/json"});
     if(navigator.canShare && navigator.canShare({files:[file]})){
       await navigator.share({files:[file], title:filename});
+      _backupErledigt();
       return;
     }
   }catch(err){
@@ -2402,6 +2591,7 @@ async function exportDaten(){
   a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
+  _backupErledigt();
 }
 
 function importDatenPaste(){
@@ -2464,6 +2654,8 @@ function _doImportDaten(jsonStr){
   try{
     const data=JSON.parse(jsonStr);
     schueler=data.schueler;termine=data.termine;
+    if(data.einstellungen){EINST=_einstMerge(data.einstellungen);saveEinst();}
+    if(Array.isArray(data.satzHistorie)&&data.satzHistorie.length)saveSatzHistorie(data.satzHistorie);
     saveAll();syncKalenderToFahrstunden();renderDashboard();
   }catch(e){showModal({title:"Fehler",msg:"Daten konnten nicht wiederhergestellt werden.",btns:[{label:"OK",action:"closeModal()"}]});}
 }
@@ -2514,7 +2706,7 @@ function renderDashSchueler(sid,returnDate){
   const geplant=Object.entries(termine).flatMap(([d,ts])=>ts.filter(t=>t.sid===sid&&!_terminVorbei(d,t.uhr,t.min)));
 
   // Sonderfahrten
-  const SONDER_DEF=[{key:'ueberland',label:'Überland',min:270,icon:'ti-road'},{key:'autobahn',label:'Autobahn',min:225,icon:'ti-road-sign'},{key:'nacht',label:'Nacht',min:135,icon:'ti-moon'}];
+  const SONDER_DEF=[{key:'ueberland',label:'Überland',icon:'ti-road'},{key:'autobahn',label:'Autobahn',icon:'ti-road-sign'},{key:'nacht',label:'Nacht',icon:'ti-moon'}];
   const notizL=n=>(n||'').toLowerCase();
   const getSonderMin=(key)=>{
     const kalMin=Object.entries(termine).flatMap(([d,ts])=>ts.filter(t=>t.sid===sid&&(t.typ===key||notizL(t.notiz).includes(key==='ueberland'?'überland':key))).map(t=>t.min||0)).reduce((a,b)=>a+b,0);
@@ -2567,8 +2759,8 @@ function renderDashSchueler(sid,returnDate){
             Theorie
           </button>`;})()}
         ${SONDER_DEF.map(sf=>{
-          const done=(s.sonder&&(s.sonder[sf.key]||0)>=sf.min);
-          return `<button onclick="toggleSonderDash('${sid}','${sf.key}',${sf.min})" style="flex:1;padding:8px 4px;border-radius:10px;border:none;background:${done?'rgba(59,130,246,0.2)':'rgba(59,130,246,0.07)'};color:${done?'#1D4ED8':'var(--tx3)'};font-size:15px;font-weight:${done?700:400};cursor:pointer;font-family:inherit;text-align:center">
+          const done=sonderDone(s,sf.key);
+          return `<button onclick="toggleSonderDash('${sid}','${sf.key}')" style="flex:1;padding:8px 4px;border-radius:10px;border:none;background:${done?'rgba(59,130,246,0.2)':'rgba(59,130,246,0.07)'};color:${done?'#1D4ED8':'var(--tx3)'};font-size:15px;font-weight:${done?700:400};cursor:pointer;font-family:inherit;text-align:center">
             <i class="ti ${done?'ti-circle-check':'ti-circle'}" style="display:block;font-size:21px;margin-bottom:2px;color:${done?'#1D4ED8':'var(--tx3)'}"></i>
             ${sf.label}
           </button>`;
@@ -2790,26 +2982,26 @@ function _doToggleTheorieDash(sid){
   saveAll();
   renderDashSchueler(sid);
 }
-function toggleSonderDash(sid,key,min){
+function toggleSonderDash(sid,key){
   const s=getS(sid);if(!s)return;
   if(!s.sonder||Array.isArray(s.sonder))s.sonder={ueberland:0,autobahn:0,nacht:0};
-  const isDone=(s.sonder[key]||0)>=min;
+  const isDone=sonderDone(s,key);
   const labelMap={ueberland:'Überland',autobahn:'Autobahn',nacht:'Nacht'};
   const lbl=labelMap[key]||key;
   showModal({
     title:lbl,
     msg:isDone?`${lbl} wieder auf offen zurücksetzen?`:`${lbl} als erledigt markieren?`,
     btns:[
-      {label:isDone?"Zurücksetzen":"Erledigt",primary:true,action:`_doToggleSonderDash('${sid}','${key}',${min})`},
+      {label:isDone?"Zurücksetzen":"Erledigt",primary:true,action:`_doToggleSonderDash('${sid}','${key}')`},
       {label:"Abbrechen",action:"closeModal()"},
     ]
   });
 }
-function _doToggleSonderDash(sid,key,min){
+function _doToggleSonderDash(sid,key){
   closeModal();
   const s=getS(sid);if(!s)return;
   if(!s.sonder||Array.isArray(s.sonder))s.sonder={ueberland:0,autobahn:0,nacht:0};
-  s.sonder[key]=(s.sonder[key]||0)>=min?0:min;
+  s.sonder[key]=sonderDone(s,key)?0:Math.max(SONDER_PFLICHT[key],sonderMin(key));
   saveAll();
   renderDashSchueler(sid);
 }
@@ -3028,29 +3220,12 @@ function renderAbrechnung(weekOffset=0){
           </div>`;
         }).join("")}
       </div></div>
-      <!-- Einstellungen -->
-      <div><div class="sec-label">Einstellungen</div>
-      <div class="card">
-        <div class="card-row">
-          <span class="card-label"><i class="ti ti-currency-euro"></i>Aktueller Satz</span>
+      <div><div class="card">
+        <div class="card-row" style="cursor:pointer" onclick="renderEinstellungen()">
+          <span class="card-label"><i class="ti ti-currency-euro"></i>Stundensatz</span>
           <span style="flex:1;text-align:right;font-size:17px;font-weight:600;color:var(--tx)">${satz}\u00a0\u20ac / 60 min</span>
+          <i class="ti ti-chevron-right" style="color:var(--tx3);font-size:18px"></i>
         </div>
-        <div class="card-row" style="flex-direction:column;align-items:stretch;gap:8px;padding:12px 14px">
-          <span class="card-label" style="margin-bottom:2px"><i class="ti ti-calendar-plus"></i>Neuer Satz g\u00fcltig ab</span>
-          <div style="display:flex;gap:8px">
-            <input type="date" id="satz-ab-datum" value="${nextMonthFirst}" style="flex:1.3;border:.5px solid var(--br2);border-radius:6px;background:var(--bg2);font-size:16px;color:var(--tx);padding:8px"/>
-            <select id="satz-input"
-              style="width:100px;text-align:center;border:.5px solid var(--br2);border-radius:6px;background:var(--bg2);font-size:16px;color:var(--tx);padding:8px">
-              ${(()=>{const opts=new Set();for(let v=10;v<=80;v+=0.5)opts.add(v);opts.add(satz);return Array.from(opts).sort((a,b)=>a-b).map(v=>`<option value="${v}" ${v===satz?"selected":""}>${v}</option>`).join("");})()}
-            </select>
-          </div>
-          <button class="btn-full" style="min-height:44px;padding:10px" onclick="saveSatzAbDatum()"><i class="ti ti-check"></i> Speichern</button>
-        </div>
-        ${satzHistorie.length>1?satzHistorie.map(e=>{const fd=fmtDate(e.ab);return`<div class="card-row">
-          <span class="card-label" style="font-weight:400;color:var(--tx2)">ab ${fd.day}. ${fd.mon} ${fd.year}</span>
-          <span style="flex:1;text-align:right;font-size:15px;color:var(--tx2)">${e.satz}\u00a0\u20ac</span>
-          <button class="t-del" style="margin-left:6px" onclick="confirmDelSatzEintrag('${e.ab}')"><i class="ti ti-trash"></i></button>
-        </div>`;}).join(""):""}
       </div></div>
     </div>
   </div>`;
@@ -3106,6 +3281,34 @@ function renderJahresAbrechnung(year){
 // ── STUNDENSATZ-HISTORIE ────────────────────────────────────────────────────
 // Sätze gelten immer erst AB einem Datum, damit eine Erhöhung nicht rückwirkend
 // bereits abgerechnete/vergangene Termine verändert.
+function _satzCardHTML(){
+  const satz=getAbrechnungSatz();
+  const now=new Date();
+  const satzHistorie=getSatzHistorie().slice().sort((a,b)=>b.ab.localeCompare(a.ab));
+  const nextMonthFirst=(()=>{const d=new Date(now.getFullYear(),now.getMonth()+1,1);return toKey(d.getFullYear(),d.getMonth()+1,d.getDate());})();
+  return `<div class="card">
+        <div class="card-row">
+          <span class="card-label"><i class="ti ti-currency-euro"></i>Aktueller Satz</span>
+          <span style="flex:1;text-align:right;font-size:17px;font-weight:600;color:var(--tx)">${satz}\u00a0\u20ac / 60 min</span>
+        </div>
+        <div class="card-row" style="flex-direction:column;align-items:stretch;gap:8px;padding:12px 14px">
+          <span class="card-label" style="margin-bottom:2px"><i class="ti ti-calendar-plus"></i>Neuer Satz g\u00fcltig ab</span>
+          <div style="display:flex;gap:8px">
+            <input type="date" id="satz-ab-datum" value="${nextMonthFirst}" style="flex:1.3;border:.5px solid var(--br2);border-radius:6px;background:var(--bg2);font-size:16px;color:var(--tx);padding:8px"/>
+            <select id="satz-input"
+              style="width:100px;text-align:center;border:.5px solid var(--br2);border-radius:6px;background:var(--bg2);font-size:16px;color:var(--tx);padding:8px">
+              ${(()=>{const opts=new Set();for(let v=10;v<=80;v+=0.5)opts.add(v);opts.add(satz);return Array.from(opts).sort((a,b)=>a-b).map(v=>`<option value="${v}" ${v===satz?"selected":""}>${v}</option>`).join("");})()}
+            </select>
+          </div>
+          <button class="btn-full" style="min-height:44px;padding:10px" onclick="saveSatzAbDatum()"><i class="ti ti-check"></i> Speichern</button>
+        </div>
+        ${satzHistorie.length>1?satzHistorie.map(e=>{const fd=fmtDate(e.ab);return`<div class="card-row">
+          <span class="card-label" style="font-weight:400;color:var(--tx2)">ab ${fd.day}. ${fd.mon} ${fd.year}</span>
+          <span style="flex:1;text-align:right;font-size:15px;color:var(--tx2)">${e.satz}\u00a0\u20ac</span>
+          <button class="t-del" style="margin-left:6px" onclick="confirmDelSatzEintrag('${e.ab}')"><i class="ti ti-trash"></i></button>
+        </div>`;}).join(""):""}
+      </div>`;
+}
 function getSatzHistorie(){
   try{
     const raw=localStorage.getItem("fs_satz_historie");
@@ -3138,7 +3341,7 @@ function saveSatzAbDatum(){
   const v=parseFloat(satzEl?satzEl.value:"");
   if(!ab||isNaN(v)||v<=0)return;
   addSatzEintrag(ab,v);
-  renderAbrechnung();
+  renderEinstellungen();
 }
 function confirmDelSatzEintrag(ab){
   if(getSatzHistorie().length<=1)return;
@@ -3157,7 +3360,7 @@ function delSatzEintrag(ab){
   const hist=getSatzHistorie();
   if(hist.length<=1)return;
   saveSatzHistorie(hist.filter(e=>e.ab!==ab));
-  renderAbrechnung();
+  renderEinstellungen();
 }
 // Summiert Euro-Beträge über mehrere Termine hinweg, wobei für jeden Tag der
 // zu diesem Zeitpunkt gültige Satz verwendet wird (statt eines globalen Satzes).
@@ -3197,7 +3400,7 @@ function exportMonatPDF(monatStr){
     const ds=toKey(yN,mN,d);
     const date=new Date(yN,mN-1,d);
     const dow=date.getDay();
-    if(dow===0||dow===6)continue;
+    if((dow===0||dow===6)&&!(termine[ds]||[]).length)continue;
     const min=(termine[ds]||[]).reduce((a,t)=>a+(t.min||0),0);
     const satzTag=getSatzFuerDatum(ds);
     const eurTag=(min/60)*satzTag;
@@ -3236,8 +3439,8 @@ function exportMonatPDF(monatStr){
   .total{font-weight:700;font-size:26px;padding:16px;text-align:right;border-top:2px solid #FF6B2B}
   @media print{button{display:none}}</style></head>
   <body>
-  <h1>Fahrschule Aras — Abrechnung ${monatName} ${y}</h1>
-  <h2>Satz: ${satzLabel}</h2>
+  <h1>${EINST.pdfFahrschule?escH(EINST.pdfFahrschule)+" — ":""}Abrechnung ${monatName} ${y}</h1>
+  <h2>${EINST.pdfFahrlehrer?"Fahrlehrer: "+escH(EINST.pdfFahrlehrer)+" · ":""}Satz: ${satzLabel}</h2>
   <table><tr><th>Tag</th><th>Datum</th><th>Minuten</th><th>Stunden</th><th>Verdienst</th></tr>
   ${rows}
   <tr><td colspan="2" class="total">Gesamt</td>
